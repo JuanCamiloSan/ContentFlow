@@ -15,8 +15,8 @@ docs/               arquitectura, decisiones (ADR), modelo de datos
 
 ## Estado
 
-Solo existe la estructura del repositorio y la documentación. El backend, el frontend y la
-infraestructura local están pendientes (ver el backlog).
+Existen la estructura, PostgreSQL local y un backend con `GET /health`. El frontend y el resto de la
+infraestructura están pendientes (ver el backlog).
 
 ## Documentación
 
@@ -48,4 +48,16 @@ docker compose -f infrastructure/docker-compose.yml exec postgres \
 Los datos persisten en el volumen `postgres_data`. El puerto solo se publica en `127.0.0.1`.
 Para borrar todo, incluidos los datos: `docker compose -f infrastructure/docker-compose.yml down -v`.
 
-El backend (A3) todavía no existe.
+### Backend (Spring Boot)
+
+Requiere JDK 21. `JAVA_HOME` debe apuntar a un JDK 21: el wrapper de Maven usa esa variable, no
+el `java` del `PATH`.
+
+```bash
+cd api
+./mvnw spring-boot:run      # arranca en http://localhost:8080
+curl http://localhost:8080/health    # {"status":"UP"}
+./mvnw verify               # compila y corre las pruebas
+```
+
+Por ahora el backend no se conecta a la base de datos (Flyway llega con A4).
