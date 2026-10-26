@@ -1,3 +1,10 @@
 spring:
   application:
     name: contentflow-api
+  datasource:
+    # Sin valores por defecto para usuario y contraseña: si faltan, la app no arranca.
+    url: jdbc:postgresql://localhost:${POSTGRES_PORT:5432}/${POSTGRES_DB:contentflow}
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
+  flyway:
+    locations: classpath:db/migration
