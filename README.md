@@ -27,5 +27,25 @@ infraestructura local están pendientes (ver el backlog).
 
 ## Ejecución local
 
-Todavía no hay nada que ejecutar. Esta sección se completa con A2 (Docker Compose con
-PostgreSQL) y A3 (backend con `GET /health`).
+### Base de datos (PostgreSQL)
+
+Requiere Docker con Compose.
+
+```bash
+cp infrastructure/.env.example infrastructure/.env
+# edita infrastructure/.env y define POSTGRES_PASSWORD
+docker compose -f infrastructure/docker-compose.yml up -d
+```
+
+Para validar que funciona:
+
+```bash
+docker compose -f infrastructure/docker-compose.yml ps    # postgres en estado "healthy"
+docker compose -f infrastructure/docker-compose.yml exec postgres \
+  psql -U contentflow -d contentflow -c "select 1"
+```
+
+Los datos persisten en el volumen `postgres_data`. El puerto solo se publica en `127.0.0.1`.
+Para borrar todo, incluidos los datos: `docker compose -f infrastructure/docker-compose.yml down -v`.
+
+El backend (A3) todavía no existe.
