@@ -53,11 +53,28 @@ Para borrar todo, incluidos los datos: `docker compose -f infrastructure/docker-
 Requiere JDK 21. `JAVA_HOME` debe apuntar a un JDK 21: el wrapper de Maven usa esa variable, no
 el `java` del `PATH`.
 
-```bash
-cd api
-./mvnw spring-boot:run      # arranca en http://localhost:8080
-curl http://localhost:8080/health    # {"status":"UP"}
-./mvnw verify               # compila y corre las pruebas
+El backend lee la conexión a la base desde variables de entorno (`POSTGRES_USER`,
+`POSTGRES_PASSWORD` y, opcionales, `POSTGRES_DB` y `POSTGRES_PORT`). Sin usuario y contraseña la
+app no arranca. En PowerShell, para cargarlas desde `infrastructure/.env`:
+
+```powershell
+Get-Content infrastructure\.env | Where-Object { $_ -match '^\s*[A-Z_]+=' } |
+  ForEach-Object { $k,$v = $_ -split '=',2; Set-Item "Env:$k" $v }
 ```
 
-Por ahora el backend no se conecta a la base de datos (Flyway llega con A4).
+En bash: `set -a; source infrastructure/.env; set +a`.
+
+```bash
+cd api
+./mvnw spring-boot:run      # arranca en http://localhost:8080, con PostgreSQL levantado
+curl http://localhost:8080/health    # {"status":"UP"}
+./mvnw verify               # compila y corre las pruebas (necesita Docker, no las variables)
+```
+
+Al arrancar, Flyway aplica las migraciones de `api/src/main/resources/db/migration`. Para ver el
+historial:
+
+```bash
+docker compose -f infrastructure/docker-compose.yml exec postgres \
+  psql -U contentflow -d contentflow -c "select * from flyway_schema_history"
+```
