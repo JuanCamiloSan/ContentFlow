@@ -6,10 +6,10 @@ WORKDIR /build
 # Primero el pom y el wrapper: la capa de dependencias se reutiliza mientras no cambie el pom
 COPY .mvn .mvn
 COPY mvnw pom.xml ./
-RUN sh ./mvnw --batch-mode dependency:go-offline
+RUN ./mvnw --batch-mode dependency:go-offline
 
 COPY src src
-RUN sh ./mvnw --batch-mode -DskipTests package \
+RUN ./mvnw --batch-mode -DskipTests package \
     && mv target/api-*.jar app.jar
 
 # Etapa final: solo el JRE y el jar, sin usuario root

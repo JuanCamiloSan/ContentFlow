@@ -1,6 +1,6 @@
 # ContentFlow — Backlog
 
-Actualizado: 2026-10-25
+Actualizado: 2026-10-27
 
 ## Cómo usar este backlog
 
@@ -23,17 +23,17 @@ Las marcadas **(bloquea)** tienen otras esperando.
 
 ## Dependencias de la Fase 1
 
-Siete bloques, 78 tareas. Una flecha significa que el bloque de abajo no puede empezar hasta que el de arriba esté cerrado.
+Siete bloques, 85 tareas. Una flecha significa que el bloque de abajo no puede empezar hasta que el de arriba esté cerrado.
 
 ```
            A · Cimientos (11 tareas · semanas 1 a 4)
                         │
-           B · Aislamiento (8 tareas · semanas 5 a 8)
+           B · Aislamiento (11 tareas · semanas 5 a 8)
                         │
-           C · Identidad (11 tareas · semanas 9 a 13)
+           C · Identidad (13 tareas · semanas 9 a 13)
           ┌─────────────┼─────────────┐
    D · Tenencia   E · Producción   F · Archivos
-    (8 tareas)     (14 tareas)      (13 tareas)
+    (9 tareas)     (14 tareas)      (14 tareas)
 
    G · Frontend (13 tareas) va encima de D, E y F
 ```
@@ -64,14 +64,19 @@ Todo este bloque es seguridad y va temprano. Agregarlo después obliga a rehacer
 
 - [ ] **B1. Tabla `workspace` y migración** — la tabla raíz, con una fila de prueba *(bloquea)*
 - [ ] **B2. Activar RLS en `workspace`** — política `USING` y `WITH CHECK` con `FORCE`, como ensayo del patrón *(seguridad)*
-- [ ] **B3. Filtro de contexto de workspace** — leer el workspace y emitir `SET LOCAL app.workspace_id` al abrir la transacción *(seguridad, bloquea)*
+- [ ] **B3. Filtro de contexto de sesión** — fijar `app.user_id` y `app.workspace_id` con `set_config(..., true)` y parámetros enlazados al abrir la transacción, en un único punto; las políticas usan `current_workspace()` *(seguridad, bloquea)*
 - [ ] **B4. Prueba de fuga entre workspaces** — dos workspaces con datos, verificar que A no ve nada de B *(seguridad)*
 - [ ] **B5. Prueba de escritura cruzada** — intentar insertar con el `workspace_id` ajeno y verificar que falla *(seguridad)*
 - [ ] **B6. Prueba de lectura por id directo** — pedir una fila de B por su UUID desde A y verificar que no aparece *(seguridad)*
 - [ ] **B7. Plantilla de migración con RLS** — un fragmento reutilizable, para que toda tabla nueva nazca con su política
 - [ ] **B8. Prueba de concurrencia** — peticiones simultáneas de dos workspaces, verificando que el contexto no sobrevive entre conexiones del pool *(seguridad)*
+- [ ] **B9. Tres roles de PostgreSQL** — dueño del esquema, aplicación y superusuario, creados en el script de inicio de Docker Compose y de Testcontainers (no en migraciones, para no poner contraseñas en Git); las migraciones solo hacen `GRANT` y `ALTER DEFAULT PRIVILEGES`. **Se hace justo después de B1**, antes de B2 *(seguridad, bloquea)*
+- [ ] **B10. Dos `DataSource`** — el del dueño solo para Flyway, el de aplicación para todo lo demás; las pruebas de aislamiento se conectan con el de aplicación y verifican que no es superusuario ni `BYPASSRLS`. **Se hace antes de B3** *(seguridad, bloquea)*
+- [ ] **B11. Prueba de consulta sin contexto** — una consulta sin `app.workspace_id` fijado falla con excepción, no con cero filas; incluye el caso de cadena vacía *(seguridad)*
 
-En esta etapa el workspace se puede tomar de una cabecera fija de prueba. Lo importante es que el mecanismo exista y esté probado antes de que haya tablas que proteger. En el bloque C solo cambia de dónde sale el valor.
+B9 y B10 llevan números altos para no renumerar las referencias, pero se ejecutan en este orden: B1, B9, B2, B10, B3 y el resto. Si llegaran después, B4 a B8 pasarían en falso: un superusuario se salta RLS y las pruebas no probarían nada. Ver [ADR 0003](adr/0003-contexto-de-sesion-y-roles-de-postgres.md).
+
+En esta etapa el usuario y el workspace se pueden tomar de cabeceras fijas de prueba. Lo importante es que el mecanismo exista y esté probado antes de que haya tablas que proteger. En el bloque C solo cambia de dónde sale el valor.
 
 B8 es la prueba menos obvia y la más importante: el bug que de verdad filtra datos entre clientes no aparece con una petición a la vez, sino cuando el pool reutiliza una conexión y el workspace anterior sobrevive.
 
@@ -81,17 +86,19 @@ Aquí se conecta el proveedor OIDC y el workspace deja de venir de una cabecera 
 
 - [ ] **C1. Proveedor OIDC en Docker Compose** — levantar Keycloak u otro en local, con un realm de prueba *(bloquea)*
 - [ ] **C2. Spring Security como resource server** — validar el token y rechazar peticiones sin él *(seguridad)*
-- [ ] **C3. Tablas `app_user` y `membership`** — migración con sus llaves y la política RLS en `membership`
-- [ ] **C4. Conectar el token al contexto** — el workspace sale del token, se elimina la cabecera de prueba *(seguridad)*
+- [ ] **C3. Tablas `app_user` y `membership`** — migración con sus llaves y las políticas RLS sobre `app.user_id` en ambas (la de `membership` también deja ver las filas del workspace activo)
+- [ ] **C4. Conectar el token al contexto** — `app.user_id` sale del token; el workspace activo sale del encabezado `X-Workspace-Id`, validado contra `membership` (uno solo: se usa ese; varios sin encabezado: se rechaza); se elimina la cabecera de prueba *(seguridad)*
 - [ ] **C5. Roles y autorización** — los cuatro roles del modelo, con verificación en los endpoints *(seguridad)*
 - [ ] **C6. Abstracción de notificaciones** — tabla `notification`, canal por tipo de evento, preferencia por usuario *(bloquea C7)*
 - [ ] **C7. Adaptador de correo** — proveedor transaccional, plantillas básicas, registro de envíos
-- [ ] **C8. Tabla `invitation` y emisión** — crear invitación con token de un solo uso y expiración, enviada por correo
-- [ ] **C9. Aceptar invitación** — el flujo que convierte una invitación en `membership`, con el token invalidado *(seguridad)*
-- [ ] **C10. Pruebas de autorización** — verificar que un aprobador no puede editar y que un rol de cliente no ve otros clientes
+- [ ] **C8. Tabla `invitation` y emisión** — crear invitación con token de un solo uso y expiración, enviada por correo; sin `FORCE` y con función `SECURITY DEFINER` de consulta por hash, con `search_path` fijo; nunca se busca a la persona por correo
+- [ ] **C9. Aceptar invitación** — función `SECURITY DEFINER` que consume el token y crea la `membership` de forma atómica, exigiendo `email_verified` y correo igual al de la invitación (normalizado); el formulario lleva dos casillas separadas, términos y privacidad, nunca una sola *(seguridad)*
+- [ ] **C10. Pruebas de autorización** — verificar que un aprobador no puede editar y que un rol de cliente no ve otros clientes, incluida la segunda frontera por `client_id` dentro de la política
 - [ ] **C11. Escaneo de dependencias** — Dependabot activo y OWASP dependency-check semanal, con llave de la NVD en secrets *(seguridad)*
+- [ ] **C12. Registro de aceptación de términos** — tabla con usuario, documento, versión aceptada, fecha e IP; se versiona porque al cambiar los términos hay que saber quién aceptó cuál; la IP no va a los logs *(bloquea el registro de usuarios y C9)*
+- [ ] **C13. Rate limit** — en login, aceptar invitación y aprobación; en memoria basta para el MVP *(seguridad)*
 
-La invitación debe invalidarse al usarse, no solo al expirar. Un token reutilizable en un correo reenviado es una puerta abierta.
+La invitación debe invalidarse al usarse, no solo al expirar. Un token reutilizable en un correo reenviado es una puerta abierta. Y no basta con el token: el correo verificado de quien acepta debe coincidir con el de la invitación, o el token pasa a ser un bearer. El límite de intentos vive en C13, no en la función: un hash que no existe no tiene fila donde contar.
 
 C11 espera hasta aquí a propósito: escanear dependencias en la semana 2, con cuatro librerías, no dice nada. Va en un workflow aparte del CI, porque tarda y falla por CVE publicadas anoche, no por tu commit. C6 y C7 entran antes que las invitaciones porque una invitación sin forma de enviarla no sirve.
 
@@ -107,6 +114,7 @@ Clientes, marcas y cuentas. El primero que vas a poder usar con datos reales.
 - [ ] **D6. Tabla `social_account` con RLS** — plataforma, identificador de cuenta, estado
 - [ ] **D7. CRUD de cuentas sociales** — sin credenciales todavía, solo el registro
 - [ ] **D8. Cargar tus tres clientes reales** — Iglesia sin Límites con dos marcas, Beraca con una marca y dos cuentas, Altocar
+- [ ] **D9. Respaldo automático de PostgreSQL** — con prueba de restauración; entra en el momento en que cargues tus clientes reales *(seguridad, bloquea G12)*
 
 D8 no es relleno. Cargar datos reales revela de inmediato si el modelo sirve: campos que faltan, campos que sobran, nombres que no encajan. Hazla antes de construir el frontend, mientras cambiar el esquema todavía es barato.
 
@@ -139,23 +147,24 @@ Cuando E14 pase, el flujo del MVP funciona de extremo a extremo por API. Ese es 
 
 El registro de archivos y la subida a S3. El NAS queda para la Fase 2.
 
-- [ ] **F1. Tabla `asset` con RLS** — nombre, tipo, tamaño, checksum, ubicación, quién subió
+- [ ] **F1. Tabla `asset` con RLS** — nombre, tipo, tamaño, `checksum` y `checksum_algorithm`, ubicación, quién subió
 - [ ] **F2. Registro manual de archivo** — crear la ficha sin subir nada, con `location_kind` en `registered`
 - [ ] **F3. Almacenamiento S3 en local** — MinIO en Docker Compose, compatible con S3, sin costo
 - [ ] **F4. Emitir URL prefirmada de subida** — expiración corta, alcance limitado a una clave *(seguridad)*
 - [ ] **F5. Confirmar subida** — el cliente avisa, el backend verifica y crea la ficha
-- [ ] **F6. Calcular y guardar checksum** — SHA-256 del contenido
+- [ ] **F6. Guardar el checksum de S3** — pedir SHA-256 al prefirmar (los SDK usan CRC32 por defecto) y leer `x-amz-checksum-sha256`, sin leer el archivo en el backend; en multiparte es compuesto, así que se guarda con su algoritmo
 - [ ] **F7. Emitir URL prefirmada de descarga** — solo para quien tiene acceso a esa pieza *(seguridad)*
 - [ ] **F8. Asociar entregable a versión** — enlazar `asset` con `piece_version`, con estado `subiendo` / `procesando` / `lista`
 - [ ] **F9. Prueba de acceso cruzado** — verificar que un usuario de otro workspace no obtiene URL de descarga *(seguridad)*
 - [ ] **F10. Subida multiparte** — para crudos grandes, con reanudación si se corta la conexión
-- [ ] **F11. Límite y validación de tamaño** — 2 GB para entregables, multiparte por encima; el tope duro de una subida simple es 5 GB
-- [ ] **F12. Miniatura del entregable** — ffmpeg sobre el fotograma al 10% de la duración, leyendo por rango desde S3, dentro de la confirmación de subida
+- [ ] **F11. Límite y validación de tamaño** — 500 MB para entregables; los crudos usan multiparte, y el tope duro de una subida simple es 5 GB
+- [ ] **F12. Miniatura del entregable** — ffmpeg sobre el fotograma al 10% de la duración, leyendo por rango desde S3, dentro de la confirmación de subida; con tiempo máximo (si no se puede, la pieza queda sin miniatura y la subida no falla) y lectura de la cola si el índice del MP4 está al final
 - [ ] **F13. Borrado selectivo de un cliente** — API que lista todo lo suyo y elimina lo que el administrador escoja, dejando fila de registro *(seguridad)*
+- [ ] **F14. Reporte semanal de retención vencida** — lista de archivos cuyo plazo de retención ya venció, enviada por el canal de notificaciones; necesita `asset` (F1), los campos de retención de D3 y las notificaciones de C6 y C7
 
 MinIO habla el mismo protocolo que S3 y corre en tu máquina sin costo. Al pasar a producción solo cambia la configuración.
 
-F9 cierra el círculo: RLS protege la base, pero una URL prefirmada vive fuera de ella. F12 no necesita worker: el entregable es un video de redes, de decenas de megas. F13 depende de D3: qué se puede borrar lo decide el contrato de cada cliente.
+F9 cierra el círculo: RLS protege la base, pero una URL prefirmada vive fuera de ella. F12 no necesita worker: el entregable es un video de redes, de decenas de megas. Es además la única excepción a "los archivos nunca pasan por el backend": ffmpeg lee los rangos desde la API. F13 y F14 dependen de D3: qué se puede borrar y cuándo vence la retención lo decide el contrato de cada cliente.
 
 ## Bloque G — Frontend
 
@@ -177,11 +186,11 @@ Las pantallas mínimas para operar el flujo. Funcionalidad antes que estética.
 
 G8 es la pantalla que más importa: es la única que ven tus clientes y la que reemplaza los audios de WhatsApp. Debe funcionar bien en celular.
 
-G12 no se hace antes de tener respaldo de Postgres probado: desplegar automático a producción sin respaldo es cómo se pierden datos de clientes.
+G12 no se hace antes de tener respaldo de Postgres probado (D9): desplegar automático a producción sin respaldo es cómo se pierden datos de clientes.
 
 ## Orden sugerido
 
-A 5 a 8 horas semanales, cada semana rinde entre dos y tres tareas. Son 78 tareas, lo que da unas 26 a 39 semanas si todo sale derecho. No sale derecho.
+A 5 a 8 horas semanales, cada semana rinde entre dos y tres tareas. Son 85 tareas, lo que da unas 28 a 43 semanas si todo sale derecho. No sale derecho.
 
 | Semanas | Bloques | Al final tienes |
 | --- | --- | --- |
@@ -223,9 +232,20 @@ APIs de Instagram, TikTok y YouTube, publicación automatizada, lectura de métr
 
 ### Trabajo continuo, no es una fase
 
-- [ ] Respaldo automático de PostgreSQL con prueba de restauración *(seguridad, bloquea G12)*
 - [ ] Documentación de tratamiento de datos personales en `docs/`
 - [ ] Contrato de servicio con propiedad de archivos y retención, y autorizaciones de uso de imagen firmadas por quienes aparecen en video
+- [ ] Redactar los términos y condiciones, la política de privacidad y la política de cookies (C12 necesita el texto de las dos primeras antes del registro de usuarios)
+- [ ] Verificar los derechos de las imágenes que usa el frontend
 - [ ] Mantener las acciones de GitHub fijadas por SHA, no por etiqueta *(seguridad)*
 
-El respaldo entra en el momento en que cargues tus clientes reales, en la semana 14, y bloquea el despliegue continuo del bloque G.
+El respaldo de PostgreSQL ya no es trabajo continuo: es la tarea D9 y bloquea el despliegue continuo del bloque G.
+
+### Decisiones de fase posterior
+
+No se toman ahora y no bloquean el MVP:
+
+- Compresión y source maps del frontend. Los source maps no se publican en producción
+- Caché
+- Escalabilidad
+- Política de reembolso
+- Elegir el proveedor de hosting

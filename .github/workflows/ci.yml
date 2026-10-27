@@ -23,10 +23,9 @@ jobs:
           java-version: "21"
           cache: maven
 
-      # api/mvnw no tiene permiso de ejecución en Git, por eso se invoca con sh.
       # Testcontainers usa el Docker del runner; no hace falta un servicio de PostgreSQL.
       - name: Compilar y correr pruebas
-        run: sh ./mvnw --batch-mode verify
+        run: ./mvnw --batch-mode verify
 
       - name: Guardar reporte de pruebas
         if: always()
