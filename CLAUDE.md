@@ -54,7 +54,7 @@ cd apps/web && npm run lint && npx tsc --noEmit
 
 **Aislamiento.** Toda tabla nueva lleva `workspace_id` y nace con su política de RLS en la misma migración. Nunca se confía en un filtro en el código. Usa la plantilla de `docs/` o la migración más reciente como referencia.
 
-**Contexto de tenant.** El workspace se fija con `SET LOCAL app.workspace_id` al abrir la transacción, en un único punto. Nunca `SET` sin `LOCAL`: las conexiones del pool se reutilizan.
+**Contexto de tenant.** `app.user_id` y `app.workspace_id` se fijan al abrir la transacción, en un único punto, con `set_config(..., true)` y parámetros enlazados; nunca concatenando el valor ni con `SET` sin `LOCAL`: las conexiones del pool se reutilizan. Las políticas usan `current_workspace()`, que falla si no hay contexto. La aplicación y las pruebas de aislamiento se conectan con el rol de aplicación, nunca como superusuario. Ver ADR 0003.
 
 **Secretos.** Ninguna credencial, contraseña ni clave en Git ni en `application.yml`. Variables de entorno en local.
 

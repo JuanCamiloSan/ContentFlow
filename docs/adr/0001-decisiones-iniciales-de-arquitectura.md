@@ -17,7 +17,7 @@ Este ADR recoge las decisiones fundacionales ya tomadas. Cada una se puede reemp
 | # | Decisión | Alternativa descartada | Razón |
 | --- | --- | --- | --- |
 | 1 | Row Level Security en PostgreSQL, con `workspace_id` en toda tabla, `FORCE` y políticas `USING` + `WITH CHECK` | Filtros en el código | Un filtro olvidado una sola vez expone datos de otro cliente; con RLS la base rechaza la fila aunque la consulta esté mal escrita |
-| 2 | El workspace se fija con `SET LOCAL app.workspace_id` al abrir la transacción, en un único punto | `SET` normal o fijarlo en cada consulta | Con un pool de conexiones, `SET` dejaría el workspace anterior activo para la siguiente petición |
+| 2 | ~~El workspace se fija con `SET LOCAL app.workspace_id` al abrir la transacción, en un único punto~~ **Reemplazada por el [ADR 0003](0003-contexto-de-sesion-y-roles-de-postgres.md)** | `SET` normal o fijarlo en cada consulta | Con un pool de conexiones, `SET` dejaría el workspace anterior activo para la siguiente petición. El ADR 0003 conserva esta razón y agrega `app.user_id`, `current_workspace()` y los roles de PostgreSQL |
 | 3 | Proveedor OIDC externo detrás de Spring Security como resource server | Autenticación propia | Recuperación de contraseña, verificación de correo, sesiones y bloqueo ya están resueltos y auditados |
 | 4 | `app_user` vive fuera del workspace; la pertenencia se resuelve en `membership` | Usuario por workspace | Una persona puede trabajar con varias agencias |
 | 5 | Identificadores UUID | Entero secuencial | Un id expuesto no revela volumen ni permite adivinar otros |

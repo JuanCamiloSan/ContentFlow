@@ -194,7 +194,7 @@ Toda tabla lleva `workspace_id`. El aislamiento lo obliga Row Level Security en 
 
 Un filtro en una consulta se puede olvidar, y basta una vez para que un cliente vea datos de otro. Con RLS, la base rechaza la fila aunque la consulta esté mal escrita.
 
-La API fija el workspace del token al abrir cada transacción, en un solo punto de entrada.
+La API fija el usuario (del token) y el workspace activo (del encabezado `X-Workspace-Id`, validado contra `membership`) al abrir cada transacción, en un solo punto de entrada. Ver `docs/adr/0003-contexto-de-sesion-y-roles-de-postgres.md`.
 
 ### Archivos
 
