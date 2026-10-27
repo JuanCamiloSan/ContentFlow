@@ -106,3 +106,10 @@ docker run --rm -p 8080:8080 -e POSTGRES_HOST=<host-de-la-base> \
 ```
 
 Las pruebas no corren dentro del build de la imagen: las ejecuta CI con `./mvnw verify`.
+
+## Logs
+
+La API escribe un JSON por línea en consola (formato `logstash` de Spring Boot). Cada petición lleva
+un `correlationId`, que se devuelve en la cabecera `X-Correlation-Id`; si el cliente manda uno válido
+se reutiliza. Nunca se registran datos personales, tokens ni rutas de archivos de clientes. Decisión
+y reglas en [`docs/adr/0002-logs-estructurados-nativos-de-spring-boot.md`](docs/adr/0002-logs-estructurados-nativos-de-spring-boot.md).

@@ -8,3 +8,8 @@ spring:
     password: ${POSTGRES_PASSWORD}
   flyway:
     locations: classpath:db/migration
+logging:
+  structured:
+    format:
+      # JSON por línea en consola; los campos del MDC (correlationId) salen en el JSON
+      console: logstash

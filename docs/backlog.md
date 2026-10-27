@@ -54,7 +54,7 @@ Un esqueleto que arranca y al que se le puede agregar todo lo demás. Nada de l�
 - [x] **A8. Pipeline de CI en GitHub Actions** — compilar, correr pruebas y guardar el reporte, en cada push y cada pull request
 - [x] **A9. Dockerfile de la API** — imagen que arranca en local y se construye también en CI
 - [x] **A10. Prueba de migraciones** — Flyway aplica desde cero sobre base vacía, y reiniciar no rompe nada
-- [ ] **A11. Logs estructurados** — JSON con identificador de correlación por petición, y regla de no registrar datos personales ni tokens *(seguridad, bloquea)*
+- [x] **A11. Logs estructurados** — JSON con identificador de correlación por petición, y regla de no registrar datos personales ni tokens *(seguridad, bloquea)*
 
 A5 parece opcional y no lo es: sin Testcontainers no se pueden probar las políticas de aislamiento del bloque siguiente. A8 viene justo después porque necesita pruebas que correr.
 
