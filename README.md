@@ -89,3 +89,20 @@ docker compose -f infrastructure/docker-compose.yml exec postgres \
 JDK 21 y el Docker del runner para Testcontainers. El reporte de pruebas (`surefire-reports`) se
 guarda como artefacto `reporte-pruebas`, incluso si las pruebas fallan. Las acciones de GitHub están
 fijadas por SHA de commit; para actualizarlas, cambia el SHA y deja la versión en el comentario.
+
+## Imagen Docker de la API
+
+`api/Dockerfile` construye la imagen en dos etapas (JDK 21 para compilar, JRE 21 para ejecutar) y
+corre como usuario sin privilegios. No lleva credenciales: la conexión llega por variables de entorno
+(`POSTGRES_HOST`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, y opcionales `POSTGRES_DB` y `POSTGRES_PORT`).
+`POSTGRES_HOST` vale `localhost` por defecto; dentro de un contenedor hay que apuntarlo al servicio
+de la base.
+
+```bash
+cd api
+docker build -t contentflow-api:local .
+docker run --rm -p 8080:8080 -e POSTGRES_HOST=<host-de-la-base> \
+  -e POSTGRES_USER=... -e POSTGRES_PASSWORD=... contentflow-api:local
+```
+
+Las pruebas no corren dentro del build de la imagen: las ejecuta CI con `./mvnw verify`.

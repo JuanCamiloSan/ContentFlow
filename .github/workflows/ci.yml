@@ -37,3 +37,7 @@ jobs:
             api/target/surefire-reports/
             api/target/failsafe-reports/
           if-no-files-found: warn
+
+      # Falla si el Dockerfile se rompe. Solo construye, no publica la imagen.
+      - name: Construir imagen Docker
+        run: docker build -t contentflow-api:ci .
