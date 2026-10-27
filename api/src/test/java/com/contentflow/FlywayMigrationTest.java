@@ -19,8 +19,10 @@ class FlywayMigrationTest extends PostgresIntegrationTest {
 		List<Map<String, Object>> historial = jdbc.queryForList(
 				"SELECT version, success FROM flyway_schema_history WHERE version IS NOT NULL ORDER BY installed_rank");
 
-		assertThat(historial).hasSize(1);
-		assertThat(historial.get(0)).containsEntry("version", "1").containsEntry("success", true);
+		// No fija cuántas migraciones hay: crece con cada tabla nueva. Que el proyecto tenga
+		// exactamente las esperadas lo comprueba MigracionesDesdeCeroTest.
+		assertThat(historial).isNotEmpty()
+				.allSatisfy(fila -> assertThat(fila).containsEntry("success", true));
 	}
 
 }
