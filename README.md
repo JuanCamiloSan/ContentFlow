@@ -82,3 +82,10 @@ historial:
 docker compose -f infrastructure/docker-compose.yml exec postgres \
   psql -U contentflow -d contentflow -c "select * from flyway_schema_history"
 ```
+
+## Integración continua
+
+`.github/workflows/ci.yml` corre `./mvnw verify` de `api/` en cada push y cada pull request, con
+JDK 21 y el Docker del runner para Testcontainers. El reporte de pruebas (`surefire-reports`) se
+guarda como artefacto `reporte-pruebas`, incluso si las pruebas fallan. Las acciones de GitHub están
+fijadas por SHA de commit; para actualizarlas, cambia el SHA y deja la versión en el comentario.
