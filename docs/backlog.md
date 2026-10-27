@@ -49,7 +49,7 @@ Un esqueleto que arranca y al que se le puede agregar todo lo demás. Nada de l�
 - [x] **A3. Proyecto Spring Boot** — Java 21, dependencias base, `GET /health` respondiendo *(bloquea)*
 - [x] **A4. Flyway conectado** — migración `V1` vacía que corre al arrancar y se verifica en la tabla de historial
 - [x] **A5. Testcontainers funcionando** — una prueba que levanta PostgreSQL real y verifica que `/health` responde *(bloquea el bloque B)*
-- [ ] **A6. OpenAPI expuesto** — Swagger UI accesible en local
+- [x] **A6. OpenAPI expuesto** — Swagger UI accesible en local
 - [ ] **A7. ADR inicial** — registrar en `docs/adr/` las decisiones del documento de modelo de datos
 - [ ] **A8. Pipeline de CI en GitHub Actions** — compilar, correr pruebas y guardar el reporte, en cada push y cada pull request
 - [ ] **A9. Dockerfile de la API** — imagen que arranca en local y se construye también en CI

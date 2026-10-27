@@ -71,6 +71,10 @@ curl http://localhost:8080/health    # {"status":"UP"}
 ./mvnw verify               # compila y corre las pruebas (necesita Docker, no las variables)
 ```
 
+Con la API arriba, la documentación interactiva está en http://localhost:8080/swagger-ui/index.html
+y la definición OpenAPI en http://localhost:8080/v3/api-docs. Todavía no hay autenticación (llega en
+el bloque C), así que antes de desplegar hay que restringir o desactivar estas rutas.
+
 Al arrancar, Flyway aplica las migraciones de `api/src/main/resources/db/migration`. Para ver el
 historial:
 
