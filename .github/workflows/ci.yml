@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  api:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api
+    steps:
+      # Acciones fijadas por SHA, no por etiqueta (docs/prompt-proyecto.md)
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      # api/mvnw no tiene permiso de ejecución en Git, por eso se invoca con sh.
+      # Testcontainers usa el Docker del runner; no hace falta un servicio de PostgreSQL.
+      - name: Compilar y correr pruebas
+        run: sh ./mvnw --batch-mode verify
+
+      - name: Guardar reporte de pruebas
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: reporte-pruebas
+          path: |
+            api/target/surefire-reports/
+            api/target/failsafe-reports/
+          if-no-files-found: warn
+
+      # Falla si el Dockerfile se rompe. Solo construye, no publica la imagen.
+      - name: Construir imagen Docker
+        run: docker build -t contentflow-api:ci .

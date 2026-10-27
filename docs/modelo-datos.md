@@ -268,6 +268,8 @@ Esto no es asesoría legal: define qué hace el sistema, no si un contrato es v�
 
 ## Registro de decisiones
 
+La versión con contexto y consecuencias vive en [`adr/0001-decisiones-iniciales-de-arquitectura.md`](adr/0001-decisiones-iniciales-de-arquitectura.md). Las decisiones nuevas van como ADR nuevo, no aquí.
+
 | Decisión | Alternativa descartada | Razón |
 | --- | --- | --- |
 | Row Level Security en la base | Filtros en el código | Un filtro olvidado una vez expone datos de otro cliente |

@@ -44,17 +44,17 @@ Los bloques A y B son los cimientos y no admiten atajos. D, E y F dependen de C 
 
 Un esqueleto que arranca y al que se le puede agregar todo lo demás. Nada de lógica de negocio todavía.
 
-- [ ] **A1. Estructura del monorepo** — crear `api/`, `apps/web/`, `infrastructure/`, `docs/`, con `.gitignore` y README de arranque
-- [ ] **A2. Docker Compose con PostgreSQL** — levantar la base en local, con volumen persistente y variables de entorno, sin credenciales en Git *(seguridad)*
-- [ ] **A3. Proyecto Spring Boot** — Java 21, dependencias base, `GET /health` respondiendo *(bloquea)*
-- [ ] **A4. Flyway conectado** — migración `V1` vacía que corre al arrancar y se verifica en la tabla de historial
-- [ ] **A5. Testcontainers funcionando** — una prueba que levanta PostgreSQL real y verifica que `/health` responde *(bloquea el bloque B)*
-- [ ] **A6. OpenAPI expuesto** — Swagger UI accesible en local
-- [ ] **A7. ADR inicial** — registrar en `docs/adr/` las decisiones del documento de modelo de datos
-- [ ] **A8. Pipeline de CI en GitHub Actions** — compilar, correr pruebas y guardar el reporte, en cada push y cada pull request
-- [ ] **A9. Dockerfile de la API** — imagen que arranca en local y se construye también en CI
-- [ ] **A10. Prueba de migraciones** — Flyway aplica desde cero sobre base vacía, y reiniciar no rompe nada
-- [ ] **A11. Logs estructurados** — JSON con identificador de correlación por petición, y regla de no registrar datos personales ni tokens *(seguridad, bloquea)*
+- [x] **A1. Estructura del monorepo** — crear `api/`, `apps/web/`, `infrastructure/`, `docs/`, con `.gitignore` y README de arranque
+- [x] **A2. Docker Compose con PostgreSQL** — levantar la base en local, con volumen persistente y variables de entorno, sin credenciales en Git *(seguridad)*
+- [x] **A3. Proyecto Spring Boot** — Java 21, dependencias base, `GET /health` respondiendo *(bloquea)*
+- [x] **A4. Flyway conectado** — migración `V1` vacía que corre al arrancar y se verifica en la tabla de historial
+- [x] **A5. Testcontainers funcionando** — una prueba que levanta PostgreSQL real y verifica que `/health` responde *(bloquea el bloque B)*
+- [x] **A6. OpenAPI expuesto** — Swagger UI accesible en local
+- [x] **A7. ADR inicial** — registrar en `docs/adr/` las decisiones del documento de modelo de datos
+- [x] **A8. Pipeline de CI en GitHub Actions** — compilar, correr pruebas y guardar el reporte, en cada push y cada pull request
+- [x] **A9. Dockerfile de la API** — imagen que arranca en local y se construye también en CI
+- [x] **A10. Prueba de migraciones** — Flyway aplica desde cero sobre base vacía, y reiniciar no rompe nada
+- [x] **A11. Logs estructurados** — JSON con identificador de correlación por petición, y regla de no registrar datos personales ni tokens *(seguridad, bloquea)*
 
 A5 parece opcional y no lo es: sin Testcontainers no se pueden probar las políticas de aislamiento del bloque siguiente. A8 viene justo después porque necesita pruebas que correr.
 
