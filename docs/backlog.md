@@ -62,7 +62,7 @@ A5 parece opcional y no lo es: sin Testcontainers no se pueden probar las polít
 
 Todo este bloque es seguridad y va temprano. Agregarlo después obliga a rehacer el acceso a datos completo.
 
-- [ ] **B1. Tabla `workspace` y migración** — la tabla raíz, con una fila de prueba *(bloquea)*
+- [x] **B1. Tabla `workspace` y migración** — la tabla raíz; sin fila de prueba en la migración (los datos de prueba los inserta cada prueba) y sin RLS hasta B2 *(bloquea)*
 - [ ] **B2. Activar RLS en `workspace`** — política `USING` y `WITH CHECK` con `FORCE`, como ensayo del patrón *(seguridad)*
 - [ ] **B3. Filtro de contexto de sesión** — fijar `app.user_id` y `app.workspace_id` con `set_config(..., true)` y parámetros enlazados al abrir la transacción, en un único punto; las políticas usan `current_workspace()` *(seguridad, bloquea)*
 - [ ] **B4. Prueba de fuga entre workspaces** — dos workspaces con datos, verificar que A no ve nada de B *(seguridad)*
