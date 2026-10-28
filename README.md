@@ -33,9 +33,16 @@ Requiere Docker con Compose.
 
 ```bash
 cp infrastructure/.env.example infrastructure/.env
-# edita infrastructure/.env y define POSTGRES_PASSWORD
+# edita infrastructure/.env y define POSTGRES_PASSWORD, CONTENTFLOW_OWNER_PASSWORD
+# y CONTENTFLOW_APP_PASSWORD (tres contraseñas distintas)
 docker compose -f infrastructure/docker-compose.yml up -d
 ```
+
+Al crear el volumen, `infrastructure/postgres/init-roles.sh` crea dos roles sin superusuario ni
+`BYPASSRLS`: `contentflow_owner` (dueño del esquema, para Flyway) y `contentflow_app` (solo DML,
+para la API). Ver [ADR 0003](docs/adr/0003-contexto-de-sesion-y-roles-de-postgres.md). El script solo
+corre con un volumen nuevo: si ya tenías uno, recréalo con `down -v` (borra los datos locales).
+Hasta B10 la API sigue conectándose con `POSTGRES_USER`.
 
 Para validar que funciona:
 

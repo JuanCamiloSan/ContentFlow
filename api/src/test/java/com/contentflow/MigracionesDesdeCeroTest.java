@@ -22,7 +22,8 @@ class MigracionesDesdeCeroTest {
 		int migracionesEnElProyecto = new PathMatchingResourcePatternResolver()
 				.getResources("classpath:db/migration/V*__*.sql").length;
 
-		try (PostgreSQLContainer baseVacia = new PostgreSQLContainer("postgres:16.4")) {
+		// Con los roles creados, como en Compose: las migraciones hacen GRANT a un rol que ya existe
+		try (PostgreSQLContainer baseVacia = RolesDePrueba.nuevaBase()) {
 			baseVacia.start();
 
 			MigrateResult primerArranque = flyway(baseVacia).migrate();

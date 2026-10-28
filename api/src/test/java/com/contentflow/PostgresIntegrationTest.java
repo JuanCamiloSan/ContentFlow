@@ -13,7 +13,7 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 public abstract class PostgresIntegrationTest {
 
-	static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:16.4");
+	static final PostgreSQLContainer POSTGRES = RolesDePrueba.nuevaBase();
 
 	static {
 		POSTGRES.start();
