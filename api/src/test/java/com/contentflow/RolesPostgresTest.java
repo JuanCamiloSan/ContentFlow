@@ -62,6 +62,10 @@ class RolesPostgresTest {
 	void laAplicacionUsaLasTablasPeroNoEsDuenaDeNinguna() throws SQLException {
 		UUID id = UUID.randomUUID();
 		try (Connection c = comoAplicacion(); Statement s = c.createStatement()) {
+			// workspace tiene RLS desde B2: el DML necesita contexto, y set_config(..., true) vive
+			// solo dentro de la transacción
+			c.setAutoCommit(false);
+			s.execute("SELECT set_config('app.workspace_id', '" + id + "', true)");
 			assertThat(s.executeUpdate("INSERT INTO workspace (id, name) VALUES ('" + id + "', 'Agencia')"))
 					.isEqualTo(1);
 			assertThat(s.executeUpdate("UPDATE workspace SET name = 'Renombrada' WHERE id = '" + id + "'"))
