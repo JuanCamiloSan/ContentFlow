@@ -21,5 +21,5 @@ USER app
 
 EXPOSE 8080
 # La conexión a la base y las credenciales llegan por variables de entorno
-# (POSTGRES_HOST, POSTGRES_USER, POSTGRES_PASSWORD...). Nada se hornea en la imagen.
+# (POSTGRES_HOST, CONTENTFLOW_APP_PASSWORD, CONTENTFLOW_OWNER_PASSWORD...). Nada se hornea en la imagen.
 ENTRYPOINT ["java", "-jar", "app.jar"]

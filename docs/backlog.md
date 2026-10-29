@@ -63,7 +63,7 @@ A5 parece opcional y no lo es: sin Testcontainers no se pueden probar las polít
 Todo este bloque es seguridad y va temprano. Agregarlo después obliga a rehacer el acceso a datos completo.
 
 - [x] **B1. Tabla `workspace` y migración** — la tabla raíz; sin fila de prueba en la migración (los datos de prueba los inserta cada prueba) y sin RLS hasta B2 *(bloquea)*
-- [ ] **B2. Activar RLS en `workspace`** — política `USING` y `WITH CHECK` con `FORCE`, como ensayo del patrón *(seguridad)*
+- [x] **B2. Activar RLS en `workspace`** — política `USING` y `WITH CHECK` con `FORCE`, como ensayo del patrón *(seguridad)*
 - [ ] **B3. Filtro de contexto de sesión** — fijar `app.user_id` y `app.workspace_id` con `set_config(..., true)` y parámetros enlazados al abrir la transacción, en un único punto; las políticas usan `current_workspace()` *(seguridad, bloquea)*
 - [ ] **B4. Prueba de fuga entre workspaces** — dos workspaces con datos, verificar que A no ve nada de B *(seguridad)*
 - [ ] **B5. Prueba de escritura cruzada** — intentar insertar con el `workspace_id` ajeno y verificar que falla *(seguridad)*
@@ -71,7 +71,7 @@ Todo este bloque es seguridad y va temprano. Agregarlo después obliga a rehacer
 - [ ] **B7. Plantilla de migración con RLS** — un fragmento reutilizable, para que toda tabla nueva nazca con su política
 - [ ] **B8. Prueba de concurrencia** — peticiones simultáneas de dos workspaces, verificando que el contexto no sobrevive entre conexiones del pool *(seguridad)*
 - [x] **B9. Tres roles de PostgreSQL** — dueño del esquema, aplicación y superusuario, creados en el script de inicio de Docker Compose y de Testcontainers (no en migraciones, para no poner contraseñas en Git); las migraciones solo hacen `GRANT` y `ALTER DEFAULT PRIVILEGES`. **Se hace justo después de B1**, antes de B2 *(seguridad, bloquea)*
-- [ ] **B10. Dos `DataSource`** — el del dueño solo para Flyway, el de aplicación para todo lo demás; las pruebas de aislamiento se conectan con el de aplicación y verifican que no es superusuario ni `BYPASSRLS`. **Se hace antes de B3** *(seguridad, bloquea)*
+- [x] **B10. Dos `DataSource`** — el del dueño solo para Flyway, el de aplicación para todo lo demás; las pruebas de aislamiento se conectan con el de aplicación y verifican que no es superusuario ni `BYPASSRLS`. **Se hace antes de B3** *(seguridad, bloquea)*
 - [ ] **B11. Prueba de consulta sin contexto** — una consulta sin `app.workspace_id` fijado falla con excepción, no con cero filas; incluye el caso de cadena vacía *(seguridad)*
 
 B9 y B10 llevan números altos para no renumerar las referencias, pero se ejecutan en este orden: B1, B9, B2, B10, B3 y el resto. Si llegaran después, B4 a B8 pasarían en falso: un superusuario se salta RLS y las pruebas no probarían nada. Ver [ADR 0003](adr/0003-contexto-de-sesion-y-roles-de-postgres.md).

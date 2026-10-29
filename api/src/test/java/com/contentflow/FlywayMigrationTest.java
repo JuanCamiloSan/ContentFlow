@@ -6,17 +6,18 @@ import java.util.List;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.datasource.DriverManagerDataSource;
 
 class FlywayMigrationTest extends PostgresIntegrationTest {
 
-	@Autowired
-	private JdbcTemplate jdbc;
-
 	@Test
 	void flywayAplicaLaMigracionBaseAlArrancar() {
-		List<Map<String, Object>> historial = jdbc.queryForList(
+		// El historial solo lo lee el dueño: el rol de aplicación no tiene acceso (ADR 0003)
+		JdbcTemplate comoDueno = new JdbcTemplate(new DriverManagerDataSource(
+				POSTGRES.getJdbcUrl(), RolesDePrueba.DUENO, RolesDePrueba.CLAVE_DUENO));
+
+		List<Map<String, Object>> historial = comoDueno.queryForList(
 				"SELECT version, success FROM flyway_schema_history WHERE version IS NOT NULL ORDER BY installed_rank");
 
 		// No fija cuántas migraciones hay: crece con cada tabla nueva. Que el proyecto tenga
