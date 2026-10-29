@@ -91,6 +91,18 @@ docker compose -f infrastructure/docker-compose.yml exec postgres \
   psql -U contentflow -d contentflow -c "select * from flyway_schema_history"
 ```
 
+#### Contexto de sesión
+
+Cada transacción que abre la API fija `app.user_id` y `app.workspace_id` con `set_config(..., true)`,
+en un único punto: `TransaccionesConContexto` (B3, [ADR 0003](docs/adr/0003-contexto-de-sesion-y-roles-de-postgres.md)).
+Sin contexto, toda consulta a una tabla con RLS falla con "No hay contexto de workspace".
+
+Hasta C4 no hay autenticación, así que el contexto sale de las cabeceras `X-Test-User-Id` y
+`X-Workspace-Id`. Ese filtro **está apagado por defecto**: cualquiera que pueda mandar una cabecera
+elige su workspace. Para probar a mano en local, arranca con
+`CONTENTFLOW_CONTEXTO_DE_PRUEBA_HABILITADO=true`. Nunca va en `application.yml` ni en un entorno
+compartido. C4 lo borra.
+
 ## Integración continua
 
 `.github/workflows/ci.yml` corre `./mvnw verify` de `api/` en cada push y cada pull request, con

@@ -64,7 +64,7 @@ Todo este bloque es seguridad y va temprano. Agregarlo después obliga a rehacer
 
 - [x] **B1. Tabla `workspace` y migración** — la tabla raíz; sin fila de prueba en la migración (los datos de prueba los inserta cada prueba) y sin RLS hasta B2 *(bloquea)*
 - [x] **B2. Activar RLS en `workspace`** — política `USING` y `WITH CHECK` con `FORCE`, como ensayo del patrón *(seguridad)*
-- [ ] **B3. Filtro de contexto de sesión** — fijar `app.user_id` y `app.workspace_id` con `set_config(..., true)` y parámetros enlazados al abrir la transacción, en un único punto; las políticas usan `current_workspace()` *(seguridad, bloquea)*
+- [x] **B3. Filtro de contexto de sesión** — fijar `app.user_id` y `app.workspace_id` con `set_config(..., true)` y parámetros enlazados al abrir la transacción, en un único punto; las políticas usan `current_workspace()` *(seguridad, bloquea)*
 - [ ] **B4. Prueba de fuga entre workspaces** — dos workspaces con datos, verificar que A no ve nada de B *(seguridad)*
 - [ ] **B5. Prueba de escritura cruzada** — intentar insertar con el `workspace_id` ajeno y verificar que falla *(seguridad)*
 - [ ] **B6. Prueba de lectura por id directo** — pedir una fila de B por su UUID desde A y verificar que no aparece *(seguridad)*

@@ -15,6 +15,9 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import com.contentflow.tenancy.ContextoDeSesion;
+import com.contentflow.tenancy.ContextoDeSesionActual;
+
 class WorkspaceTablaTest extends PostgresIntegrationTest {
 
 	@Autowired
@@ -72,16 +75,15 @@ class WorkspaceTablaTest extends PostgresIntegrationTest {
 				.isInstanceOf(DataIntegrityViolationException.class);
 	}
 
-	/**
-	 * Andamiaje de prueba hasta B3: abre una transacción y fija el workspace como lo hará el
-	 * filtro. set_config(..., true) muere al terminar la transacción.
-	 */
+	/** Abre una transacción con el workspace fijado por el mismo mecanismo que usa la API (B3). */
 	private <T> T enWorkspace(UUID workspace, Supplier<T> accion) {
-		return new TransactionTemplate(transacciones).execute(estado -> {
-			jdbc.queryForObject("SELECT set_config('app.workspace_id', ?, true)", String.class,
-					workspace.toString());
-			return accion.get();
-		});
+		ContextoDeSesionActual.fijar(new ContextoDeSesion(null, workspace));
+		try {
+			return new TransactionTemplate(transacciones).execute(estado -> accion.get());
+		}
+		finally {
+			ContextoDeSesionActual.limpiar();
+		}
 	}
 
 }
