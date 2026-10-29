@@ -216,13 +216,13 @@ Los roles se crean fuera de las migraciones (Docker Compose, Testcontainers, pro
 
 Solo contra un PostgreSQL real, con Testcontainers, **conectándose con el rol de aplicación**. Testcontainers arranca por defecto con superusuario, y con él estas pruebas pasarían sin probar nada.
 
-- [ ] Verificar que el rol de aplicación no es superusuario ni tiene `BYPASSRLS`
-- [ ] Crear dos workspaces con datos en cada uno
-- [ ] Fijar el workspace A y verificar que las consultas no devuelven nada de B
-- [ ] Intentar insertar una fila con el `workspace_id` de B y verificar que falla
-- [ ] Intentar leer una fila de B por su `id` directo y verificar que no aparece
-- [ ] Peticiones simultáneas de dos workspaces, verificando que el contexto no sobrevive entre conexiones del pool
-- [ ] Una consulta sin contexto de workspace falla con excepción, no con cero filas
+- [x] Verificar que el rol de aplicación no es superusuario ni tiene `BYPASSRLS`
+- [x] Crear dos workspaces con datos en cada uno
+- [x] Fijar el workspace A y verificar que las consultas no devuelven nada de B
+- [x] Intentar insertar una fila con el `workspace_id` de B y verificar que falla
+- [x] Intentar leer una fila de B por su `id` directo y verificar que no aparece
+- [x] Peticiones simultáneas de dos workspaces, verificando que el contexto no sobrevive entre conexiones del pool
+- [x] Una consulta sin contexto de workspace falla con excepción, no con cero filas
 
 La cuarta simula un identificador filtrado; la sexta es el bug que de verdad filtra datos y no aparece con una petición a la vez.
 
