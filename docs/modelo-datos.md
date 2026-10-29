@@ -167,7 +167,7 @@ CREATE POLICY workspace_isolation ON content_piece
   WITH CHECK (workspace_id = current_workspace());
 ```
 
-`USING` filtra lo que se puede leer. `WITH CHECK` impide escribir una fila en un workspace ajeno. Se necesitan las dos: sin `WITH CHECK`, alguien podría insertar datos en otro espacio aunque no pueda leerlo.
+`USING` filtra lo que se puede leer. `WITH CHECK` impide escribir una fila en un workspace ajeno. En una política `ALL`, PostgreSQL reutiliza el `USING` si se omite el `WITH CHECK`, pero se escribe siempre explícito: así la intención es visible, y partir la política por comando más adelante no deja las escrituras abiertas. `PoliticasRlsTest` exige las dos cláusulas en toda tabla con `workspace_id`.
 
 `FORCE` hace que la política aplique también al dueño de la tabla. Pero no protege contra superusuarios ni contra roles con `BYPASSRLS`: por eso la aplicación se conecta con un rol propio (ver "Los tres roles").
 
