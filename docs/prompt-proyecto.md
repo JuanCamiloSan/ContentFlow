@@ -1,6 +1,6 @@
 # ContentFlow — Prompt de proyecto (v2)
 
-Actualizado: 2026-10-25
+Actualizado: 2026-10-31
 
 ## Contexto y objetivo
 
@@ -65,14 +65,18 @@ Por invitación desde el workspace, nunca por registro abierto. Así ninguna cue
 
 | Rol | Ámbito | Puede |
 | --- | --- | --- |
-| Propietario | Workspace | Todo, incluida la gestión de usuarios |
-| Editor | Workspace | Crear y editar piezas, subir archivos, cambiar estados |
-| Aprobador | Cliente | Ver piezas y aprobar o rechazar versiones |
-| Colaborador | Cliente | Ver piezas y comentar, sin aprobar |
+| Propietario (administrador) | Workspace | Todo, incluida la gestión de usuarios. Puede aprobar en nombre del cliente cuando hace falta |
+| Editor | Workspace | Crear y editar piezas, subir archivos y cambiar estados, menos aprobar o rechazar. Lee las observaciones del cliente |
+| Aprobador | Cliente | Ver piezas, comentar y aprobar o rechazar versiones. Es quien decide por el cliente |
+| Colaborador | Cliente | Ver piezas y comentar, sin aprobar ni rechazar. Opina; no decide |
+
+Los dos primeros roles son de la agencia y los dos últimos son del cliente. Son personas distintas: quien edita el video no es quien lo aprueba. Cada lado tiene su propia vista, la de la agencia y la del cliente, pero la vista no es la frontera de seguridad: lo que cada persona puede ver y hacer lo impone la base de datos y el backend. Ver [ADR 0005](adr/0005-roles-de-agencia-y-cliente-y-comentarios.md).
+
+Un ejemplo del reparto en el cliente: la persona que maneja las redes de una cafetería comenta "el logo sale muy chico" (Colaborador), y el dueño decide si se aprueba (Aprobador).
 
 ### Autenticación
 
-No se escribe el sistema de autenticación a mano. Se usa un proveedor OIDC (Keycloak u otro equivalente) detrás de Spring Security como resource server.
+No se escribe el sistema de autenticación a mano. Se usa un proveedor OIDC externo detrás de Spring Security como resource server. El propuesto es Auth0 ([ADR 0004](adr/0004-proveedores-de-identidad-y-correo.md)).
 
 Al tener registro propio se asumen recuperación de contraseña, verificación de correo, manejo de sesiones y bloqueo por intentos fallidos. Un proveedor ya resuelto evita implementar y auditar todo eso.
 

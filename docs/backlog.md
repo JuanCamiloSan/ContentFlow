@@ -1,6 +1,6 @@
 # ContentFlow — Backlog
 
-Actualizado: 2026-10-27
+Actualizado: 2026-10-31
 
 ## Cómo usar este backlog
 
@@ -23,7 +23,7 @@ Las marcadas **(bloquea)** tienen otras esperando.
 
 ## Dependencias de la Fase 1
 
-Siete bloques, 86 tareas. Una flecha significa que el bloque de abajo no puede empezar hasta que el de arriba esté cerrado.
+Siete bloques, 88 tareas. Una flecha significa que el bloque de abajo no puede empezar hasta que el de arriba esté cerrado.
 
 ```
            A · Cimientos (11 tareas)
@@ -33,9 +33,9 @@ Siete bloques, 86 tareas. Una flecha significa que el bloque de abajo no puede e
            C · Identidad (13 tareas)
           ┌─────────────┼─────────────┐
    D · Tenencia   E · Producción   F · Archivos
-    (9 tareas)     (14 tareas)      (15 tareas)
+    (9 tareas)     (15 tareas)      (15 tareas)
 
-   G · Frontend (13 tareas) va encima de D, E y F
+   G · Frontend (14 tareas) va encima de D, E y F
 ```
 
 Los bloques A y B son los cimientos y no admiten atajos. D, E y F dependen de C pero no entre sí, así que su orden es negociable. El sugerido es D, E, F porque cargar tus clientes reales temprano revela errores del modelo mientras todavía es barato corregirlos.
@@ -88,12 +88,12 @@ Aquí se conecta el proveedor OIDC y el workspace deja de venir de una cabecera 
 - [ ] **C2. Spring Security como resource server** — validar el token (emisor y audience) y rechazar peticiones sin él; las pruebas usan tokens JWT simulados, nunca Auth0 real *(seguridad)*
 - [ ] **C3. Tablas `app_user` y `membership`** — migración con sus llaves y las políticas RLS sobre `app.user_id` en ambas (la de `membership` también deja ver las filas del workspace activo)
 - [ ] **C4. Conectar el token al contexto** — `app.user_id` sale del token; el workspace activo sale del encabezado `X-Workspace-Id`, validado contra `membership` (uno solo: se usa ese; varios sin encabezado: se rechaza); se elimina la cabecera de prueba *(seguridad)*
-- [ ] **C5. Roles y autorización** — los cuatro roles del modelo, con verificación en los endpoints *(seguridad)*
+- [ ] **C5. Roles y autorización** — los cuatro roles del modelo (propietario, editor, aprobador, colaborador), con verificación en los endpoints. El propietario puede aprobar en nombre del cliente; el editor no aprueba ni rechaza ni mueve una pieza fuera de `En aprobación`; el colaborador solo comenta ([ADR 0005](adr/0005-roles-de-agencia-y-cliente-y-comentarios.md)) *(seguridad)*
 - [ ] **C6. Abstracción de notificaciones** — tabla `notification`, canal por tipo de evento, preferencia por usuario *(bloquea C7)*
 - [ ] **C7. Adaptador de correo** *(se aplaza hasta comprar el dominio; mientras tanto C8 entrega la invitación por enlace copiable)* — Resend (ADR 0004), plantillas básicas, registro de envíos. Antes de empezar, verificar que el plan gratuito de Auth0 deja usar un proveedor de correo propio. **Necesita un dominio propio comprado y acceso a su DNS** para verificar el remitente (SPF, DKIM); compra pendiente
 - [ ] **C8. Tabla `invitation` y emisión** — crear invitación con token de un solo uso y expiración, devuelta como un enlace que el administrador copia y entrega a mano, y enviada además por correo cuando exista el adaptador de C7; sin `FORCE` y con función `SECURITY DEFINER` de consulta por hash, con `search_path` fijo; nunca se busca a la persona por correo. La API de administración de Auth0 se llama con un token M2M guardado en caché (el plan gratuito da 1.000 tokens M2M al mes); aquí se decide si se desactiva el registro abierto (*Disable Sign Ups*), lo que obligaría a crear las cuentas de los invitados desde el backend
 - [ ] **C9. Aceptar invitación** — función `SECURITY DEFINER` que consume el token y crea la `membership` de forma atómica, exigiendo `email_verified` y correo igual al de la invitación (normalizado); el formulario lleva dos casillas separadas, términos y privacidad, nunca una sola *(seguridad)*
-- [ ] **C10. Pruebas de autorización** — con tokens JWT simulados, verificar que un aprobador no puede editar y que un rol de cliente no ve otros clientes, incluida la segunda frontera por `client_id` dentro de la política
+- [ ] **C10. Pruebas de autorización** — con tokens JWT simulados, verificar que un aprobador no puede editar y que un rol de cliente no ve otros clientes, incluida la segunda frontera por `client_id` dentro de la política; que un editor no puede aprobar ni rechazar, que un colaborador solo comenta, y que una decisión del propietario queda marcada como hecha en nombre del cliente
 - [ ] **C11. Escaneo de dependencias** — Dependabot activo y OWASP dependency-check semanal, con llave de la NVD en secrets *(seguridad)*
 - [ ] **C12. Registro de aceptación de términos** — tabla con usuario, documento, versión aceptada, fecha e IP; se versiona porque al cambiar los términos hay que saber quién aceptó cuál; la IP no va a los logs *(bloquea el registro de usuarios y C9)*
 - [ ] **C13. Rate limit** — en login, aceptar invitación y aprobación; en memoria basta para el MVP *(seguridad)*
@@ -130,16 +130,17 @@ El corazón del producto: piezas, estados, versiones y aprobaciones.
 - [ ] **E2. Crear y listar piezas** — endpoints con filtro por marca y por estado
 - [ ] **E3. Enum de estados** — los ocho estados del modelo, como tipo en base y en código
 - [ ] **E4. Máquina de transiciones** — tabla de transiciones permitidas y rechazo de las inválidas *(bloquea)*
-- [ ] **E5. Endpoint de cambio de estado** — una sola puerta para mover una pieza, nunca edición libre del campo *(seguridad)*
+- [ ] **E5. Endpoint de cambio de estado** — una sola puerta para mover una pieza, nunca edición libre del campo; además valida qué rol puede disparar cada transición (el editor no mueve una pieza fuera de `En aprobación`) *(seguridad)*
 - [ ] **E6. Pruebas de transiciones** — verificar que agendado a publicado falla y que el camino válido pasa
 - [ ] **E7. Tabla `piece_target`** — la relación muchos a muchos entre pieza y cuentas destino
 - [ ] **E8. Asignar destinos a una pieza** — incluida la validación de que la cuenta pertenece a la misma marca *(seguridad)*
 - [ ] **E9. Tabla `piece_version`** — con `round_number` y referencia al entregable
 - [ ] **E10. Crear versión** — el número de ronda se calcula solo, nunca lo manda el cliente
 - [ ] **E11. Tabla `review`** — decisión, revisor, comentario, fecha
-- [ ] **E12. Aprobar o rechazar** — el rechazo mueve la pieza a edición y habilita la ronda siguiente
+- [ ] **E12. Aprobar o rechazar** — el rechazo mueve la pieza a edición y habilita la ronda siguiente; el propietario puede decidir en nombre del cliente y la decisión queda marcada con `decided_on_behalf`
 - [ ] **E13. Tabla `audit_log`** — solo inserciones, alimentada por los cambios de estado y las decisiones *(seguridad)*
 - [ ] **E14. Pruebas del ciclo completo** — crear pieza, versión, rechazo, versión 2, aprobación
+- [ ] **E15. Tabla `comment` y comentar** — opinión suelta sobre una versión, con `workspace_id`, RLS y la segunda frontera por `client_id`. El colaborador la escribe, el editor y el propietario la leen, y no cambia el estado de la pieza. `text` se puede vaciar como `review.comment`. Prueba: un colaborador comenta y no puede aprobar. Se hace después de E11 y antes de E14, como B9 y B10 (necesita C5)
 
 E4 es la más importante del bloque. Si las transiciones no están centralizadas, cada endpoint nuevo va a poder mover el estado a su manera.
 
@@ -173,7 +174,8 @@ F9 cierra el círculo: RLS protege la base, pero una URL prefirmada vive fuera d
 
 Las pantallas mínimas para operar el flujo. Funcionalidad antes que estética.
 
-- [ ] **G1. Proyecto Next.js y autenticación** — login contra el proveedor OIDC y sesión persistente
+- [ ] **G0. Prototipo para validar con los funcionales** — pantallas navegables con datos de ejemplo, sin backend, para que el equipo funcional pruebe el flujo y los roles antes del bloque G. Hecho como artefacto de claude.ai el 2026-10-31; falta decidir si se guarda una copia en el repositorio. No sustituye a G1 a G13 *(no bloquea)*
+- [ ] **G1. Proyecto Next.js y autenticación** — login contra el proveedor OIDC y sesión persistente, con dos zonas de rutas, `/agencia` y `/cliente` ([ADR 0005](adr/0005-roles-de-agencia-y-cliente-y-comentarios.md))
 - [ ] **G2. Cliente de API tipado** — generado desde OpenAPI, para no escribir tipos a mano
 - [ ] **G3. Pantalla de clientes y marcas** — listar, crear, editar, incluidos propiedad y retención
 - [ ] **G4. Pantalla de cuentas sociales** — asociadas a su marca

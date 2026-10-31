@@ -1,6 +1,6 @@
 # ContentFlow — Modelo de datos y seguridad
 
-Actualizado: 2026-10-25
+Actualizado: 2026-10-31
 
 Define cómo ContentFlow guarda la información y cómo impide que los datos de un cliente se mezclen con los de otro.
 
@@ -55,7 +55,7 @@ La base guarda la ficha del archivo: nombre, tamaño, dónde está, su huella di
                                          └─────────┘
 ```
 
-`audit_log` y `deletion_record` se relacionan con todas y no aparecen en el dibujo.
+`audit_log` y `deletion_record` se relacionan con todas y no aparecen en el dibujo. `comment` cuelga de `piece_version` y tampoco aparece.
 
 ## Las tablas, una por una
 
@@ -63,7 +63,7 @@ La base guarda la ficha del archivo: nombre, tamaño, dónde está, su huella di
 | --- | --- | --- |
 | `workspace` | El espacio de cada agencia | Única tabla sin `workspace_id`: ella es la frontera |
 | `app_user` | Personas con cuenta | Vive fuera del workspace: una persona puede pertenecer a varios |
-| `membership` | Qué persona pertenece a qué workspace y con qué rol | También limita a un cliente concreto cuando el rol lo requiere |
+| `membership` | Qué persona pertenece a qué workspace y con qué rol | El rol es uno de cuatro: propietario, editor, aprobador o colaborador. También limita a un cliente concreto cuando el rol lo requiere |
 | `invitation` | Invitaciones pendientes | Token de un solo uso con expiración. Excepción al aislamiento: se consulta por función `SECURITY DEFINER` (ADR 0003) |
 | `notification` | Avisos enviados y por enviar | Canal por tipo de evento, preferencia por usuario |
 | `client` | Empresa cliente | Relación comercial, más propiedad y retención pactadas |
@@ -72,7 +72,8 @@ La base guarda la ficha del archivo: nombre, tamaño, dónde está, su huella di
 | `content_piece` | La pieza de contenido | Título, descripción, fecha objetivo, estado actual |
 | `piece_target` | Qué pieza va a qué cuenta | Tabla puente: una pieza puede ir a varias cuentas |
 | `piece_version` | Cada entrega concreta para revisión | Número de ronda, entregable y estado de disponibilidad |
-| `review` | Aprobación o rechazo de una versión | Quién, cuándo, decisión y comentario |
+| `review` | Aprobación o rechazo de una versión | Quién, cuándo, decisión y comentario. Marca si el propietario decidió en nombre del cliente |
+| `comment` | Opinión suelta sobre una versión | Texto, autor y versión. No aprueba ni mueve la pieza. Lo escribe el colaborador y lo lee la agencia |
 | `asset` | Ficha de cada archivo | Nombre, tipo, tamaño, checksum y su algoritmo, ubicación, miniatura |
 | `deletion_record` | Qué se borró, quién y cuándo | Sobrevive al borrado: es la prueba de cumplimiento |
 | `audit_log` | Registro de quién hizo qué | Solo inserciones, nunca se edita ni borra. Solo identificadores y enumeraciones, sin llave a `app_user` |
@@ -104,6 +105,17 @@ El rechazo es la única transición hacia atrás. La pieza vuelve a edición y s
 
 El backend solo permite las transiciones del diagrama. No se puede pasar de agendado a publicado saltándose la aprobación, ni retroceder a capricho. Cada cambio deja una fila en `audit_log`.
 
+### Quién mueve cada transición
+
+| Transición | Quién puede |
+| --- | --- |
+| Solicitado → Agendado → Grabado → En edición | Propietario y Editor |
+| En edición → En aprobación | Propietario y Editor, y solo si hay una versión que nadie ha revisado todavía |
+| En aprobación → Aprobado, o de vuelta a En edición | Solo por una decisión en `review`: la del Aprobador, o la del Propietario en nombre del cliente. El Editor no puede |
+| Aprobado → Publicado → Reportado | Propietario y Editor |
+
+El Colaborador no mueve estados. Esta regla vive en el endpoint de transición, junto con la tabla de transiciones permitidas (E4 y E5 del backlog).
+
 ### Dónde entra cada plan de servicio
 
 | Plan | Entra en | Sale en |
@@ -130,9 +142,16 @@ Si al rechazar se sobrescribiera el video, se perdería la evidencia de qué se 
 | `reviewer_id` | La persona concreta, no "el cliente" |
 | `decision` | Aprobado o cambios solicitados |
 | `comment` | Qué pidió cambiar |
+| `decided_on_behalf` | Verdadero si el Propietario decidió en nombre del cliente, para distinguirlo de la decisión del propio cliente |
 | `created_at` | Cuándo, sin posibilidad de editarlo después |
 
 Las filas de `review` no se editan ni se borran. Una decisión que cambia de opinión genera una fila nueva.
+
+### Comentarios
+
+Una decisión y una opinión son cosas distintas. `review` guarda la decisión. `comment` guarda lo que otra persona del cliente quiere decir sobre una versión: el Colaborador opina ("el logo sale muy chico") y el Aprobador decide. Un comentario no aprueba, no rechaza y no mueve la pieza. El Editor y el Propietario lo leen junto con las observaciones de la decisión.
+
+Cuando el Propietario decide en nombre del cliente, `review` lo marca con `decided_on_behalf`, para que la bitácora distinga esa decisión de la del propio cliente. Ver [ADR 0005](adr/0005-roles-de-agencia-y-cliente-y-comentarios.md).
 
 ### El contador de rondas
 
@@ -311,7 +330,7 @@ Por eso el sistema debe poder eliminar un video aunque la agencia sea dueña del
 
 `audit_log` y `deletion_record` se conservan. Para que no contengan datos personales desde el origen, `audit_log` guarda solo identificadores y valores de enumeración, nunca texto libre, y **no tiene llave foránea a `app_user`**. Así, borrar a una persona deja en el registro un UUID opaco y no bloquea el borrado. Queda constancia de quién aprobó qué y cuándo, sin conservar los datos que se pidió eliminar.
 
-**Excepción documentada: `review.comment`.** Es texto escrito por una persona y debe poder vaciarse si esa persona pide su eliminación. Un disparador permite actualizar únicamente `comment` y `redacted_at`; cualquier otro cambio en `review` se rechaza.
+**Excepción documentada: `review.comment` y `comment.text`.** Son texto escrito por una persona y deben poder vaciarse si esa persona pide su eliminación. Un disparador permite actualizar únicamente `comment` y `redacted_at`; cualquier otro cambio en `review` se rechaza. `comment` usa el mismo mecanismo, con `text` y `redacted_at`.
 
 Esto no es asesoría legal: define qué hace el sistema, no si un contrato es válido.
 
@@ -341,6 +360,9 @@ La versión con contexto y consecuencias vive en [`adr/0001-decisiones-iniciales
 | Miniatura dentro de la petición | Trabajos en segundo plano | ffmpeg lee el inicio del archivo por rango, tarda segundos |
 | Abstracción de notificaciones | Enviar correos directo | WhatsApp y correo tienen reglas distintas y conviven |
 | Logs estructurados desde el inicio | Agregar observabilidad al final | El identificador de correlación se diseña o no existe |
+| Roles de agencia y de cliente separados; el propietario puede aprobar en nombre del cliente y queda marcado | Un solo rol de aprobación, o que el editor también apruebe | Quien edita no debe aprobar su propio trabajo, y la bitácora debe distinguir quién decidió de verdad ([ADR 0005](adr/0005-roles-de-agencia-y-cliente-y-comentarios.md)) |
+| `comment` separado de `review` | Guardar las opiniones como decisiones | Opinar no es decidir, y el colaborador no tiene dónde dejar su comentario sin aprobar ni rechazar |
+| Vistas de agencia y de cliente, con la seguridad en la base | Seguridad por vista, o dos aplicaciones | La vista mejora la experiencia, pero solo RLS y el backend impiden ver lo ajeno |
 
 ## Preguntas abiertas
 
