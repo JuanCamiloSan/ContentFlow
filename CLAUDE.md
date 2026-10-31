@@ -91,7 +91,6 @@ Nunca marques una tarea como terminada con pruebas fallando o implementación pa
 
 No las asumas. Si una tarea depende de alguna, pregunta:
 
-- Proveedor de identidad: Keycloak autoalojado o servicio gestionado
-- Proveedor de correo transaccional
+- Proveedores de identidad (Auth0) y de correo (Resend): propuestos en el ADR 0004; verifica sus riesgos abiertos antes de C7 y de D8
 - Proveedor de almacenamiento S3 en producción
 - Alcance del `audit_log`: solo eventos clave o toda escritura

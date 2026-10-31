@@ -59,8 +59,7 @@ Este ADR recoge las decisiones fundacionales ya tomadas. Cada una se puede reemp
 
 No están decididas y no se asumen. Cada una tendrá su ADR cuando se resuelva:
 
-- Proveedor de identidad: Keycloak autoalojado o servicio gestionado (se necesita hacia la semana 9)
-- Proveedor de correo transaccional (antes de las invitaciones)
+- Proveedor de identidad y proveedor de correo transaccional: propuestos en el [ADR 0004](0004-proveedores-de-identidad-y-correo.md) (Auth0 y Resend), con riesgos aún por verificar
 - Proveedor de almacenamiento S3 en producción
 - Alcance del `audit_log`: solo eventos clave o toda escritura
 - Estrategia de respaldo de PostgreSQL (obligatoria antes de datos reales)

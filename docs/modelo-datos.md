@@ -344,11 +344,11 @@ La versión con contexto y consecuencias vive en [`adr/0001-decisiones-iniciales
 
 ## Preguntas abiertas
 
-Ninguna bloquea el inicio del MVP. Las dos primeras se necesitan en la semana 9.
+Ninguna bloquea el inicio del MVP. Las dos primeras se necesitan antes del bloque C.
 
-- [ ] **Proveedor de identidad.** Keycloak autoalojado o un servicio gestionado
-- [ ] **Proveedor de correo transaccional.** Antes de las invitaciones
-- [ ] **Proveedor de almacenamiento S3.** Afecta costo y latencia, no el modelo
+- [ ] **Proveedor de identidad.** Propuesto: Auth0 ([ADR 0004](adr/0004-proveedores-de-identidad-y-correo.md)); faltan por verificar sus riesgos abiertos
+- [ ] **Proveedor de correo transaccional.** Propuesto: Resend (ADR 0004). Necesita un dominio propio antes de C7
+- [ ] **Proveedor de almacenamiento S3.** Candidato: Cloudflare R2. Afecta costo y latencia, y puede afectar el modelo: su documentación no lista el checksum SHA-256 que pide `asset`. Se resuelve en la tarea F15 del backlog
 - [ ] **Alcance del `audit_log`.** Solo eventos clave o toda escritura
 - [ ] **Umbral de registro en el RNBD.** Verificar el vigente ante la SIC
 - [ ] **Estrategia de respaldo de Postgres.** Frecuencia, destino y prueba de restauración

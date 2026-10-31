@@ -23,7 +23,7 @@ Las marcadas **(bloquea)** tienen otras esperando.
 
 ## Dependencias de la Fase 1
 
-Siete bloques, 85 tareas. Una flecha significa que el bloque de abajo no puede empezar hasta que el de arriba esté cerrado.
+Siete bloques, 86 tareas. Una flecha significa que el bloque de abajo no puede empezar hasta que el de arriba esté cerrado.
 
 ```
            A · Cimientos (11 tareas)
@@ -33,7 +33,7 @@ Siete bloques, 85 tareas. Una flecha significa que el bloque de abajo no puede e
            C · Identidad (13 tareas)
           ┌─────────────┼─────────────┐
    D · Tenencia   E · Producción   F · Archivos
-    (9 tareas)     (14 tareas)      (14 tareas)
+    (9 tareas)     (14 tareas)      (15 tareas)
 
    G · Frontend (13 tareas) va encima de D, E y F
 ```
@@ -84,23 +84,23 @@ B8 es la prueba menos obvia y la más importante: el bug que de verdad filtra da
 
 Aquí se conecta el proveedor OIDC y el workspace deja de venir de una cabecera de prueba.
 
-- [ ] **C1. Proveedor OIDC en Docker Compose** — levantar Keycloak u otro en local, con un realm de prueba *(bloquea)*
-- [ ] **C2. Spring Security como resource server** — validar el token y rechazar peticiones sin él *(seguridad)*
+- [ ] **C1. Tenant de Auth0 y API registrada** — tenant de desarrollo con su API (audience `https://api.contentflow`) y la aplicación del frontend, con las credenciales solo en variables de entorno y sin Keycloak en Docker Compose ([ADR 0004](adr/0004-proveedores-de-identidad-y-correo.md)). El tenant, la API y la aplicación ya se crearon a mano en el panel el 2026-10-31; falta dejar documentadas las variables de entorno *(bloquea)*
+- [ ] **C2. Spring Security como resource server** — validar el token (emisor y audience) y rechazar peticiones sin él; las pruebas usan tokens JWT simulados, nunca Auth0 real *(seguridad)*
 - [ ] **C3. Tablas `app_user` y `membership`** — migración con sus llaves y las políticas RLS sobre `app.user_id` en ambas (la de `membership` también deja ver las filas del workspace activo)
 - [ ] **C4. Conectar el token al contexto** — `app.user_id` sale del token; el workspace activo sale del encabezado `X-Workspace-Id`, validado contra `membership` (uno solo: se usa ese; varios sin encabezado: se rechaza); se elimina la cabecera de prueba *(seguridad)*
 - [ ] **C5. Roles y autorización** — los cuatro roles del modelo, con verificación en los endpoints *(seguridad)*
 - [ ] **C6. Abstracción de notificaciones** — tabla `notification`, canal por tipo de evento, preferencia por usuario *(bloquea C7)*
-- [ ] **C7. Adaptador de correo** — proveedor transaccional, plantillas básicas, registro de envíos
-- [ ] **C8. Tabla `invitation` y emisión** — crear invitación con token de un solo uso y expiración, enviada por correo; sin `FORCE` y con función `SECURITY DEFINER` de consulta por hash, con `search_path` fijo; nunca se busca a la persona por correo
+- [ ] **C7. Adaptador de correo** *(se aplaza hasta comprar el dominio; mientras tanto C8 entrega la invitación por enlace copiable)* — Resend (ADR 0004), plantillas básicas, registro de envíos. Antes de empezar, verificar que el plan gratuito de Auth0 deja usar un proveedor de correo propio. **Necesita un dominio propio comprado y acceso a su DNS** para verificar el remitente (SPF, DKIM); compra pendiente
+- [ ] **C8. Tabla `invitation` y emisión** — crear invitación con token de un solo uso y expiración, devuelta como un enlace que el administrador copia y entrega a mano, y enviada además por correo cuando exista el adaptador de C7; sin `FORCE` y con función `SECURITY DEFINER` de consulta por hash, con `search_path` fijo; nunca se busca a la persona por correo. La API de administración de Auth0 se llama con un token M2M guardado en caché (el plan gratuito da 1.000 tokens M2M al mes); aquí se decide si se desactiva el registro abierto (*Disable Sign Ups*), lo que obligaría a crear las cuentas de los invitados desde el backend
 - [ ] **C9. Aceptar invitación** — función `SECURITY DEFINER` que consume el token y crea la `membership` de forma atómica, exigiendo `email_verified` y correo igual al de la invitación (normalizado); el formulario lleva dos casillas separadas, términos y privacidad, nunca una sola *(seguridad)*
-- [ ] **C10. Pruebas de autorización** — verificar que un aprobador no puede editar y que un rol de cliente no ve otros clientes, incluida la segunda frontera por `client_id` dentro de la política
+- [ ] **C10. Pruebas de autorización** — con tokens JWT simulados, verificar que un aprobador no puede editar y que un rol de cliente no ve otros clientes, incluida la segunda frontera por `client_id` dentro de la política
 - [ ] **C11. Escaneo de dependencias** — Dependabot activo y OWASP dependency-check semanal, con llave de la NVD en secrets *(seguridad)*
 - [ ] **C12. Registro de aceptación de términos** — tabla con usuario, documento, versión aceptada, fecha e IP; se versiona porque al cambiar los términos hay que saber quién aceptó cuál; la IP no va a los logs *(bloquea el registro de usuarios y C9)*
 - [ ] **C13. Rate limit** — en login, aceptar invitación y aprobación; en memoria basta para el MVP *(seguridad)*
 
 La invitación debe invalidarse al usarse, no solo al expirar. Un token reutilizable en un correo reenviado es una puerta abierta. Y no basta con el token: el correo verificado de quien acepta debe coincidir con el de la invitación, o el token pasa a ser un bearer. El límite de intentos vive en C13, no en la función: un hash que no existe no tiene fila donde contar.
 
-C11 espera hasta aquí a propósito: escanear dependencias en la semana 2, con cuatro librerías, no dice nada. Va en un workflow aparte del CI, porque tarda y falla por CVE publicadas anoche, no por tu commit. C6 y C7 entran antes que las invitaciones porque una invitación sin forma de enviarla no sirve.
+C11 espera hasta aquí a propósito: escanear dependencias en la semana 2, con cuatro librerías, no dice nada. Va en un workflow aparte del CI, porque tarda y falla por CVE publicadas anoche, no por tu commit. C6 y C7 entran antes que las invitaciones porque una invitación sin forma de enviarla no sirve; mientras C7 espere al dominio, el enlace copiable de C8 cubre esa forma de entrega.
 
 ## Bloque D — Tenencia
 
@@ -163,6 +163,7 @@ El registro de archivos y la subida a S3. El NAS queda para la Fase 2.
 - [ ] **F12. Miniatura del entregable** — ffmpeg sobre el fotograma al 10% de la duración, leyendo por rango desde S3, dentro de la confirmación de subida; con tiempo máximo (si no se puede, la pieza queda sin miniatura y la subida no falla) y lectura de la cola si el índice del MP4 está al final
 - [ ] **F13. Borrado selectivo de un cliente** — API que lista todo lo suyo y elimina lo que el administrador escoja, dejando fila de registro *(seguridad)*
 - [ ] **F14. Reporte semanal de retención vencida** — lista de archivos cuyo plazo de retención ya venció, enviada por el canal de notificaciones; necesita `asset` (F1), los campos de retención de D3 y las notificaciones de C6 y C7
+- [ ] **F15. Probar Cloudflare R2 con SHA-256** — con un bucket real (activarlo puede pedir tarjeta; se queda dentro del plan gratuito), verificar: URL prefirmada de subida con `x-amz-checksum-sha256` firmado, que el checksum se pueda leer después (`ChecksumMode`), lectura por rango (para F12) y subida multiparte con su checksum compuesto. La documentación oficial de R2 solo lista `Content-MD5` y no documenta SHA-256. **Se hace justo después de F3 y antes de F4 y F6** *(bloquea F4 y F6)*. Si falla: o se adapta el diseño a `Content-MD5` (cambia la sección "Archivos" de `modelo-datos.md` y el ADR) o se elige otro proveedor compatible con S3. El resultado va en un ADR
 
 MinIO habla el mismo protocolo que S3 y corre en tu máquina sin costo. Al pasar a producción solo cambia la configuración.
 
