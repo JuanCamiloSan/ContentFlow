@@ -33,9 +33,17 @@ Requiere Docker con Compose.
 
 ```bash
 cp infrastructure/.env.example infrastructure/.env
-# edita infrastructure/.env y define POSTGRES_PASSWORD
+# edita infrastructure/.env y define POSTGRES_PASSWORD, CONTENTFLOW_OWNER_PASSWORD
+# y CONTENTFLOW_APP_PASSWORD (tres contraseñas distintas)
 docker compose -f infrastructure/docker-compose.yml up -d
 ```
+
+Al crear el volumen, `infrastructure/postgres/init-roles.sh` crea dos roles sin superusuario ni
+`BYPASSRLS`: `contentflow_owner` (dueño del esquema, para Flyway) y `contentflow_app` (solo DML,
+para la API). Ver [ADR 0003](docs/adr/0003-contexto-de-sesion-y-roles-de-postgres.md). El script solo
+corre con un volumen nuevo: si ya tenías uno, recréalo con `down -v` (borra los datos locales).
+La API se conecta con `contentflow_app` y Flyway con `contentflow_owner` (B10); `POSTGRES_USER` es solo
+administración y la aplicación no lo usa.
 
 Para validar que funciona:
 
@@ -53,8 +61,8 @@ Para borrar todo, incluidos los datos: `docker compose -f infrastructure/docker-
 Requiere JDK 21. `JAVA_HOME` debe apuntar a un JDK 21: el wrapper de Maven usa esa variable, no
 el `java` del `PATH`.
 
-El backend lee la conexión a la base desde variables de entorno (`POSTGRES_USER`,
-`POSTGRES_PASSWORD` y, opcionales, `POSTGRES_DB` y `POSTGRES_PORT`). Sin usuario y contraseña la
+El backend lee la conexión a la base desde variables de entorno (`CONTENTFLOW_APP_PASSWORD`,
+`CONTENTFLOW_OWNER_PASSWORD` y, opcionales, `POSTGRES_HOST`, `POSTGRES_DB` y `POSTGRES_PORT`). Sin las dos contraseñas la
 app no arranca. En PowerShell, para cargarlas desde `infrastructure/.env`:
 
 ```powershell
@@ -83,6 +91,18 @@ docker compose -f infrastructure/docker-compose.yml exec postgres \
   psql -U contentflow -d contentflow -c "select * from flyway_schema_history"
 ```
 
+#### Contexto de sesión
+
+Cada transacción que abre la API fija `app.user_id` y `app.workspace_id` con `set_config(..., true)`,
+en un único punto: `TransaccionesConContexto` (B3, [ADR 0003](docs/adr/0003-contexto-de-sesion-y-roles-de-postgres.md)).
+Sin contexto, toda consulta a una tabla con RLS falla con "No hay contexto de workspace".
+
+Hasta C4 no hay autenticación, así que el contexto sale de las cabeceras `X-Test-User-Id` y
+`X-Workspace-Id`. Ese filtro **está apagado por defecto**: cualquiera que pueda mandar una cabecera
+elige su workspace. Para probar a mano en local, arranca con
+`CONTENTFLOW_CONTEXTO_DE_PRUEBA_HABILITADO=true`. Nunca va en `application.yml` ni en un entorno
+compartido. C4 lo borra.
+
 ## Integración continua
 
 `.github/workflows/ci.yml` corre `./mvnw verify` de `api/` en cada push y cada pull request, con
@@ -94,7 +114,7 @@ fijadas por SHA de commit; para actualizarlas, cambia el SHA y deja la versión 
 
 `api/Dockerfile` construye la imagen en dos etapas (JDK 21 para compilar, JRE 21 para ejecutar) y
 corre como usuario sin privilegios. No lleva credenciales: la conexión llega por variables de entorno
-(`POSTGRES_HOST`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, y opcionales `POSTGRES_DB` y `POSTGRES_PORT`).
+(`CONTENTFLOW_APP_PASSWORD`, `CONTENTFLOW_OWNER_PASSWORD`, y opcionales `POSTGRES_DB` y `POSTGRES_PORT`).
 `POSTGRES_HOST` vale `localhost` por defecto; dentro de un contenedor hay que apuntarlo al servicio
 de la base.
 
@@ -102,7 +122,7 @@ de la base.
 cd api
 docker build -t contentflow-api:local .
 docker run --rm -p 8080:8080 -e POSTGRES_HOST=<host-de-la-base> \
-  -e POSTGRES_USER=... -e POSTGRES_PASSWORD=... contentflow-api:local
+  -e CONTENTFLOW_APP_PASSWORD=... -e CONTENTFLOW_OWNER_PASSWORD=... contentflow-api:local
 ```
 
 Las pruebas no corren dentro del build de la imagen: las ejecuta CI con `./mvnw verify`.

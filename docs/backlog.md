@@ -26,11 +26,11 @@ Las marcadas **(bloquea)** tienen otras esperando.
 Siete bloques, 85 tareas. Una flecha significa que el bloque de abajo no puede empezar hasta que el de arriba esté cerrado.
 
 ```
-           A · Cimientos (11 tareas · semanas 1 a 4)
+           A · Cimientos (11 tareas)
                         │
-           B · Aislamiento (11 tareas · semanas 5 a 8)
+           B · Aislamiento (11 tareas)
                         │
-           C · Identidad (13 tareas · semanas 9 a 13)
+           C · Identidad (13 tareas)
           ┌─────────────┼─────────────┐
    D · Tenencia   E · Producción   F · Archivos
     (9 tareas)     (14 tareas)      (14 tareas)
@@ -62,17 +62,17 @@ A5 parece opcional y no lo es: sin Testcontainers no se pueden probar las polít
 
 Todo este bloque es seguridad y va temprano. Agregarlo después obliga a rehacer el acceso a datos completo.
 
-- [ ] **B1. Tabla `workspace` y migración** — la tabla raíz, con una fila de prueba *(bloquea)*
-- [ ] **B2. Activar RLS en `workspace`** — política `USING` y `WITH CHECK` con `FORCE`, como ensayo del patrón *(seguridad)*
-- [ ] **B3. Filtro de contexto de sesión** — fijar `app.user_id` y `app.workspace_id` con `set_config(..., true)` y parámetros enlazados al abrir la transacción, en un único punto; las políticas usan `current_workspace()` *(seguridad, bloquea)*
-- [ ] **B4. Prueba de fuga entre workspaces** — dos workspaces con datos, verificar que A no ve nada de B *(seguridad)*
-- [ ] **B5. Prueba de escritura cruzada** — intentar insertar con el `workspace_id` ajeno y verificar que falla *(seguridad)*
-- [ ] **B6. Prueba de lectura por id directo** — pedir una fila de B por su UUID desde A y verificar que no aparece *(seguridad)*
-- [ ] **B7. Plantilla de migración con RLS** — un fragmento reutilizable, para que toda tabla nueva nazca con su política
-- [ ] **B8. Prueba de concurrencia** — peticiones simultáneas de dos workspaces, verificando que el contexto no sobrevive entre conexiones del pool *(seguridad)*
-- [ ] **B9. Tres roles de PostgreSQL** — dueño del esquema, aplicación y superusuario, creados en el script de inicio de Docker Compose y de Testcontainers (no en migraciones, para no poner contraseñas en Git); las migraciones solo hacen `GRANT` y `ALTER DEFAULT PRIVILEGES`. **Se hace justo después de B1**, antes de B2 *(seguridad, bloquea)*
-- [ ] **B10. Dos `DataSource`** — el del dueño solo para Flyway, el de aplicación para todo lo demás; las pruebas de aislamiento se conectan con el de aplicación y verifican que no es superusuario ni `BYPASSRLS`. **Se hace antes de B3** *(seguridad, bloquea)*
-- [ ] **B11. Prueba de consulta sin contexto** — una consulta sin `app.workspace_id` fijado falla con excepción, no con cero filas; incluye el caso de cadena vacía *(seguridad)*
+- [x] **B1. Tabla `workspace` y migración** — la tabla raíz; sin fila de prueba en la migración (los datos de prueba los inserta cada prueba) y sin RLS hasta B2 *(bloquea)*
+- [x] **B2. Activar RLS en `workspace`** — política `USING` y `WITH CHECK` con `FORCE`, como ensayo del patrón *(seguridad)*
+- [x] **B3. Filtro de contexto de sesión** — fijar `app.user_id` y `app.workspace_id` con `set_config(..., true)` y parámetros enlazados al abrir la transacción, en un único punto; las políticas usan `current_workspace()` *(seguridad, bloquea)*
+- [x] **B4. Prueba de fuga entre workspaces** — dos workspaces con datos, verificar que A no ve nada de B *(seguridad)*
+- [x] **B5. Prueba de escritura cruzada** — intentar insertar con el `workspace_id` ajeno y verificar que falla *(seguridad)*
+- [x] **B6. Prueba de lectura por id directo** — pedir una fila de B por su UUID desde A y verificar que no aparece *(seguridad)*
+- [x] **B7. Plantilla de migración con RLS** — un fragmento reutilizable, para que toda tabla nueva nazca con su política
+- [x] **B8. Prueba de concurrencia** — peticiones simultáneas de dos workspaces, verificando que el contexto no sobrevive entre conexiones del pool *(seguridad)*
+- [x] **B9. Tres roles de PostgreSQL** — dueño del esquema, aplicación y superusuario, creados en el script de inicio de Docker Compose y de Testcontainers (no en migraciones, para no poner contraseñas en Git); las migraciones solo hacen `GRANT` y `ALTER DEFAULT PRIVILEGES`. **Se hace justo después de B1**, antes de B2 *(seguridad, bloquea)*
+- [x] **B10. Dos `DataSource`** — el del dueño solo para Flyway, el de aplicación para todo lo demás; las pruebas de aislamiento se conectan con el de aplicación y verifican que no es superusuario ni `BYPASSRLS`. **Se hace antes de B3** *(seguridad, bloquea)*
+- [x] **B11. Prueba de consulta sin contexto** — una consulta sin `app.workspace_id` fijado falla con excepción, no con cero filas; incluye el caso de cadena vacía *(seguridad)*
 
 B9 y B10 llevan números altos para no renumerar las referencias, pero se ejecutan en este orden: B1, B9, B2, B10, B3 y el resto. Si llegaran después, B4 a B8 pasarían en falso: un superusuario se salta RLS y las pruebas no probarían nada. Ver [ADR 0003](adr/0003-contexto-de-sesion-y-roles-de-postgres.md).
 
@@ -106,7 +106,7 @@ C11 espera hasta aquí a propósito: escanear dependencias en la semana 2, con c
 
 Clientes, marcas y cuentas. El primero que vas a poder usar con datos reales.
 
-- [ ] **D1. Tabla `client` con RLS** — migración, entidad JPA, repositorio
+- [ ] **D1. Tabla `client` con RLS** — migración con la plantilla de `docs/plantilla-migracion-rls.sql`, entidad JPA, repositorio; incluye las pruebas de aislamiento (fuga, escritura cruzada, lectura por id directo y consulta sin contexto) sobre `client` *(seguridad)*
 - [ ] **D2. CRUD de clientes** — endpoints con validación y pruebas
 - [ ] **D3. Propiedad y retención por cliente** — campos que reflejan lo pactado en el contrato: dueño de crudos, dueño de entregables, meses de retención *(bloquea el borrado de F13)*
 - [ ] **D4. Tabla `brand` con RLS** — colgada de `client`, con los campos del perfil creativo
@@ -115,6 +115,8 @@ Clientes, marcas y cuentas. El primero que vas a poder usar con datos reales.
 - [ ] **D7. CRUD de cuentas sociales** — sin credenciales todavía, solo el registro
 - [ ] **D8. Cargar tus tres clientes reales** — Iglesia sin Límites con dos marcas, Beraca con una marca y dos cuentas, Altocar
 - [ ] **D9. Respaldo automático de PostgreSQL** — con prueba de restauración; entra en el momento en que cargues tus clientes reales *(seguridad, bloquea G12)*
+
+Las pruebas de aislamiento de D1 repiten las de `TablaDeNegocioRlsTest` (B4 a B6 y B11), que hoy corren sobre una tabla de prueba. Cuando exista `client`, conviene convertir esa clase en una base parametrizada por tabla, para que cada tabla de negocio nueva la reutilice con pocas líneas. `PoliticasRlsTest` ya vigila por sí sola que toda tabla con `workspace_id` tenga RLS activa, forzada y con `USING` y `WITH CHECK`; no prueba el comportamiento.
 
 D8 no es relleno. Cargar datos reales revela de inmediato si el modelo sirve: campos que faltan, campos que sobran, nombres que no encajan. Hazla antes de construir el frontend, mientras cambiar el esquema todavía es barato.
 
@@ -190,23 +192,23 @@ G12 no se hace antes de tener respaldo de Postgres probado (D9): desplegar autom
 
 ## Orden sugerido
 
-A 5 a 8 horas semanales, cada semana rinde entre dos y tres tareas. Son 85 tareas, lo que da unas 28 a 43 semanas si todo sale derecho. No sale derecho.
+No se proyectan semanas. La estimación inicial (dos a tres tareas por semana) quedó desmentida: los bloques A y B se cerraron entre el 2026-10-26 y el 2026-10-29. El ritmo se recalibrará al cerrar el bloque C, que sí depende de terceros (proveedor OIDC, correo) y es más representativo que B.
 
-| Semanas | Bloques | Al final tienes |
-| --- | --- | --- |
-| 1 a 4 | A | Un backend que arranca, migraciones, CI en verde y logs |
-| 5 a 8 | B | Aislamiento probado, el cimiento de seguridad |
-| 9 a 13 | C | Login real, roles, invitaciones por correo y escaneo |
-| 14 a 17 | D | Tus tres clientes cargados de verdad |
-| 18 a 23 | E | El flujo completo funcionando por API |
-| 24 a 29 | F | Subida, descarga, miniaturas y borrado selectivo |
-| 30 a 39 | G | La aplicación usable por ti y por tus clientes, desplegada |
+| Bloque | Al final tienes |
+| --- | --- |
+| A | Un backend que arranca, migraciones, CI en verde y logs |
+| B | Aislamiento probado, el cimiento de seguridad |
+| C | Login real, roles, invitaciones por correo y escaneo |
+| D | Tus tres clientes cargados de verdad |
+| E | El flujo completo funcionando por API |
+| F | Subida, descarga, miniaturas y borrado selectivo |
+| G | La aplicación usable por ti y por tus clientes, desplegada |
 
 ### Tres hitos para no perder el ánimo
 
-1. **Semana 8** — el aislamiento probado. No se ve, pero es lo que hace vendible el producto
-2. **Semana 17** — tus clientes reales cargados. Por primera vez el sistema habla de tu operación
-3. **Semana 23** — el ciclo completo por API. El producto existe, aunque todavía sin pantallas
+1. **Aislamiento probado** — cumplido el 2026-10-29 (cierre del bloque B). No se ve, pero es lo que hace vendible el producto
+2. **Clientes reales cargados** (cierre de D) — por primera vez el sistema habla de tu operación
+3. **Ciclo completo por API** (cierre de E) — el producto existe, aunque todavía sin pantallas
 
 ### Si el ritmo se cae
 

@@ -73,7 +73,7 @@ La base guarda la ficha del archivo: nombre, tamaño, dónde está, su huella di
 | `piece_target` | Qué pieza va a qué cuenta | Tabla puente: una pieza puede ir a varias cuentas |
 | `piece_version` | Cada entrega concreta para revisión | Número de ronda, entregable y estado de disponibilidad |
 | `review` | Aprobación o rechazo de una versión | Quién, cuándo, decisión y comentario |
-| `asset` | Ficha de cada archivo | Nombre, tipo, tamaño, checksum, ubicación, miniatura |
+| `asset` | Ficha de cada archivo | Nombre, tipo, tamaño, checksum y su algoritmo, ubicación, miniatura |
 | `deletion_record` | Qué se borró, quién y cuándo | Sobrevive al borrado: es la prueba de cumplimiento |
 | `audit_log` | Registro de quién hizo qué | Solo inserciones, nunca se edita ni borra. Solo identificadores y enumeraciones, sin llave a `app_user` |
 
@@ -167,7 +167,7 @@ CREATE POLICY workspace_isolation ON content_piece
   WITH CHECK (workspace_id = current_workspace());
 ```
 
-`USING` filtra lo que se puede leer. `WITH CHECK` impide escribir una fila en un workspace ajeno. Se necesitan las dos: sin `WITH CHECK`, alguien podría insertar datos en otro espacio aunque no pueda leerlo.
+`USING` filtra lo que se puede leer. `WITH CHECK` impide escribir una fila en un workspace ajeno. En una política `ALL`, PostgreSQL reutiliza el `USING` si se omite el `WITH CHECK`, pero se escribe siempre explícito: así la intención es visible, y partir la política por comando más adelante no deja las escrituras abiertas. `PoliticasRlsTest` exige las dos cláusulas en toda tabla con `workspace_id`.
 
 `FORCE` hace que la política aplique también al dueño de la tabla. Pero no protege contra superusuarios ni contra roles con `BYPASSRLS`: por eso la aplicación se conecta con un rol propio (ver "Los tres roles").
 
@@ -216,13 +216,13 @@ Los roles se crean fuera de las migraciones (Docker Compose, Testcontainers, pro
 
 Solo contra un PostgreSQL real, con Testcontainers, **conectándose con el rol de aplicación**. Testcontainers arranca por defecto con superusuario, y con él estas pruebas pasarían sin probar nada.
 
-- [ ] Verificar que el rol de aplicación no es superusuario ni tiene `BYPASSRLS`
-- [ ] Crear dos workspaces con datos en cada uno
-- [ ] Fijar el workspace A y verificar que las consultas no devuelven nada de B
-- [ ] Intentar insertar una fila con el `workspace_id` de B y verificar que falla
-- [ ] Intentar leer una fila de B por su `id` directo y verificar que no aparece
-- [ ] Peticiones simultáneas de dos workspaces, verificando que el contexto no sobrevive entre conexiones del pool
-- [ ] Una consulta sin contexto de workspace falla con excepción, no con cero filas
+- [x] Verificar que el rol de aplicación no es superusuario ni tiene `BYPASSRLS`
+- [x] Crear dos workspaces con datos en cada uno
+- [x] Fijar el workspace A y verificar que las consultas no devuelven nada de B
+- [x] Intentar insertar una fila con el `workspace_id` de B y verificar que falla
+- [x] Intentar leer una fila de B por su `id` directo y verificar que no aparece
+- [x] Peticiones simultáneas de dos workspaces, verificando que el contexto no sobrevive entre conexiones del pool
+- [x] Una consulta sin contexto de workspace falla con excepción, no con cero filas
 
 La cuarta simula un identificador filtrado; la sexta es el bug que de verdad filtra datos y no aparece con una petición a la vez.
 
