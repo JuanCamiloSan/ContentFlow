@@ -46,7 +46,7 @@ class MigracionesDesdeCeroTest {
 
 	private static Flyway flyway(PostgreSQLContainer base) {
 		return Flyway.configure()
-				.dataSource(base.getJdbcUrl(), base.getUsername(), base.getPassword())
+				.dataSource(base.getJdbcUrl(), RolesDePrueba.DUENO, RolesDePrueba.CLAVE_DUENO)
 				.locations("classpath:db/migration")
 				.load();
 	}

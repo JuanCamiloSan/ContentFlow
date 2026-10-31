@@ -73,7 +73,7 @@ La base guarda la ficha del archivo: nombre, tamaño, dónde está, su huella di
 | `piece_target` | Qué pieza va a qué cuenta | Tabla puente: una pieza puede ir a varias cuentas |
 | `piece_version` | Cada entrega concreta para revisión | Número de ronda, entregable y estado de disponibilidad |
 | `review` | Aprobación o rechazo de una versión | Quién, cuándo, decisión y comentario |
-| `asset` | Ficha de cada archivo | Nombre, tipo, tamaño, checksum, ubicación, miniatura |
+| `asset` | Ficha de cada archivo | Nombre, tipo, tamaño, checksum y su algoritmo, ubicación, miniatura |
 | `deletion_record` | Qué se borró, quién y cuándo | Sobrevive al borrado: es la prueba de cumplimiento |
 | `audit_log` | Registro de quién hizo qué | Solo inserciones, nunca se edita ni borra. Solo identificadores y enumeraciones, sin llave a `app_user` |
 

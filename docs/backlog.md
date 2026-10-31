@@ -26,11 +26,11 @@ Las marcadas **(bloquea)** tienen otras esperando.
 Siete bloques, 85 tareas. Una flecha significa que el bloque de abajo no puede empezar hasta que el de arriba esté cerrado.
 
 ```
-           A · Cimientos (11 tareas · semanas 1 a 4)
+           A · Cimientos (11 tareas)
                         │
-           B · Aislamiento (11 tareas · semanas 5 a 8)
+           B · Aislamiento (11 tareas)
                         │
-           C · Identidad (13 tareas · semanas 9 a 13)
+           C · Identidad (13 tareas)
           ┌─────────────┼─────────────┐
    D · Tenencia   E · Producción   F · Archivos
     (9 tareas)     (14 tareas)      (14 tareas)
@@ -192,23 +192,23 @@ G12 no se hace antes de tener respaldo de Postgres probado (D9): desplegar autom
 
 ## Orden sugerido
 
-A 5 a 8 horas semanales, cada semana rinde entre dos y tres tareas. Son 85 tareas, lo que da unas 28 a 43 semanas si todo sale derecho. No sale derecho.
+No se proyectan semanas. La estimación inicial (dos a tres tareas por semana) quedó desmentida: los bloques A y B se cerraron entre el 2026-10-26 y el 2026-10-29. El ritmo se recalibrará al cerrar el bloque C, que sí depende de terceros (proveedor OIDC, correo) y es más representativo que B.
 
-| Semanas | Bloques | Al final tienes |
-| --- | --- | --- |
-| 1 a 4 | A | Un backend que arranca, migraciones, CI en verde y logs |
-| 5 a 8 | B | Aislamiento probado, el cimiento de seguridad |
-| 9 a 13 | C | Login real, roles, invitaciones por correo y escaneo |
-| 14 a 17 | D | Tus tres clientes cargados de verdad |
-| 18 a 23 | E | El flujo completo funcionando por API |
-| 24 a 29 | F | Subida, descarga, miniaturas y borrado selectivo |
-| 30 a 39 | G | La aplicación usable por ti y por tus clientes, desplegada |
+| Bloque | Al final tienes |
+| --- | --- |
+| A | Un backend que arranca, migraciones, CI en verde y logs |
+| B | Aislamiento probado, el cimiento de seguridad |
+| C | Login real, roles, invitaciones por correo y escaneo |
+| D | Tus tres clientes cargados de verdad |
+| E | El flujo completo funcionando por API |
+| F | Subida, descarga, miniaturas y borrado selectivo |
+| G | La aplicación usable por ti y por tus clientes, desplegada |
 
 ### Tres hitos para no perder el ánimo
 
-1. **Semana 8** — el aislamiento probado. No se ve, pero es lo que hace vendible el producto
-2. **Semana 17** — tus clientes reales cargados. Por primera vez el sistema habla de tu operación
-3. **Semana 23** — el ciclo completo por API. El producto existe, aunque todavía sin pantallas
+1. **Aislamiento probado** — cumplido el 2026-10-29 (cierre del bloque B). No se ve, pero es lo que hace vendible el producto
+2. **Clientes reales cargados** (cierre de D) — por primera vez el sistema habla de tu operación
+3. **Ciclo completo por API** (cierre de E) — el producto existe, aunque todavía sin pantallas
 
 ### Si el ritmo se cae
 
