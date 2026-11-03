@@ -1,6 +1,6 @@
 # ContentFlow — Backlog
 
-Actualizado: 2026-10-31
+Actualizado: 2026-11-03
 
 ## Cómo usar este backlog
 
@@ -23,19 +23,19 @@ Las marcadas **(bloquea)** tienen otras esperando.
 
 ## Dependencias de la Fase 1
 
-Siete bloques, 88 tareas. Una flecha significa que el bloque de abajo no puede empezar hasta que el de arriba esté cerrado.
+Siete bloques, 92 tareas. Una flecha significa que el bloque de abajo no puede empezar hasta que el de arriba esté cerrado.
 
 ```
            A · Cimientos (11 tareas)
                         │
            B · Aislamiento (11 tareas)
                         │
-           C · Identidad (13 tareas)
+           C · Identidad (14 tareas)
           ┌─────────────┼─────────────┐
    D · Tenencia   E · Producción   F · Archivos
     (9 tareas)     (15 tareas)      (15 tareas)
 
-   G · Frontend (14 tareas) va encima de D, E y F
+   G · Frontend (17 tareas) va encima de D, E y F
 ```
 
 Los bloques A y B son los cimientos y no admiten atajos. D, E y F dependen de C pero no entre sí, así que su orden es negociable. El sugerido es D, E, F porque cargar tus clientes reales temprano revela errores del modelo mientras todavía es barato corregirlos.
@@ -82,25 +82,28 @@ B8 es la prueba menos obvia y la más importante: el bug que de verdad filtra da
 
 ## Bloque C — Identidad
 
-Aquí se conecta el proveedor OIDC y el workspace deja de venir de una cabecera de prueba.
+Aquí se conecta el proveedor OIDC (Google, directo) y el workspace deja de venir de una cabecera de prueba. El registro es abierto y las invitaciones son por enlace ([ADR 0004](adr/0004-proveedores-de-identidad-y-correo.md), [ADR 0006](adr/0006-registro-abierto-administrador-de-plataforma-y-buzon.md)).
 
-- [ ] **C1. Tenant de Auth0 y API registrada** — tenant de desarrollo con su API (audience `https://api.contentflow`) y la aplicación del frontend, con las credenciales solo en variables de entorno y sin Keycloak en Docker Compose ([ADR 0004](adr/0004-proveedores-de-identidad-y-correo.md)). El tenant, la API y la aplicación ya se crearon a mano en el panel el 2026-10-31; falta dejar documentadas las variables de entorno *(bloquea)*
-- [ ] **C2. Spring Security como resource server** — validar el token (emisor y audience) y rechazar peticiones sin él; las pruebas usan tokens JWT simulados, nunca Auth0 real *(seguridad)*
-- [ ] **C3. Tablas `app_user` y `membership`** — migración con sus llaves y las políticas RLS sobre `app.user_id` en ambas (la de `membership` también deja ver las filas del workspace activo)
-- [ ] **C4. Conectar el token al contexto** — `app.user_id` sale del token; el workspace activo sale del encabezado `X-Workspace-Id`, validado contra `membership` (uno solo: se usa ese; varios sin encabezado: se rechaza); se elimina la cabecera de prueba *(seguridad)*
+- [ ] **C1. Cliente OAuth de Google** — proyecto en Google Cloud con un cliente OAuth web, la pantalla de consentimiento en modo de pruebas y el ID de cliente documentado como variable de entorno; cualquier secreto de cliente solo en variables de entorno, y sin Keycloak ni otro servicio de identidad en Docker Compose. Al crearlo, verificar qué pide la pantalla de consentimiento para publicarla (enlaces a términos y privacidad, dominio). El tenant de Auth0 creado el 2026-10-31 queda sin uso *(bloquea)*
+- [ ] **C2. Spring Security como resource server** — validar el token de Google (emisor `https://accounts.google.com` y audience igual al ID de cliente) y rechazar peticiones sin él; confirmar que Spring valida ese token con esos parámetros; las pruebas usan tokens JWT simulados, nunca Google real *(seguridad)*
+- [ ] **C3. Tablas `app_user` y `membership`** — migración con sus llaves y las políticas RLS sobre `app.user_id` en ambas (la de `membership` también deja ver las filas del workspace activo). `app_user` incluye `max_workspaces` (1 por defecto) y la marca de administrador de la plataforma
+- [ ] **C4. Conectar el token al contexto** — `app.user_id` sale del token; el workspace activo sale del encabezado `X-Workspace-Id`, validado contra `membership` (uno solo: se usa ese; varios sin encabezado: se rechaza); una persona autenticada sin `membership` solo puede llamar a crear workspace (C14) y a aceptar invitación (C9); se elimina la cabecera de prueba *(seguridad)*
 - [ ] **C5. Roles y autorización** — los cuatro roles del modelo (propietario, editor, aprobador, colaborador), con verificación en los endpoints. El propietario puede aprobar en nombre del cliente; el editor no aprueba ni rechaza ni mueve una pieza fuera de `En aprobación`; el colaborador solo comenta ([ADR 0005](adr/0005-roles-de-agencia-y-cliente-y-comentarios.md)) *(seguridad)*
-- [ ] **C6. Abstracción de notificaciones** — tabla `notification`, canal por tipo de evento, preferencia por usuario *(bloquea C7)*
-- [ ] **C7. Adaptador de correo** *(se aplaza hasta comprar el dominio; mientras tanto C8 entrega la invitación por enlace copiable)* — Resend (ADR 0004), plantillas básicas, registro de envíos. Antes de empezar, verificar que el plan gratuito de Auth0 deja usar un proveedor de correo propio. **Necesita un dominio propio comprado y acceso a su DNS** para verificar el remitente (SPF, DKIM); compra pendiente
-- [ ] **C8. Tabla `invitation` y emisión** — crear invitación con token de un solo uso y expiración, devuelta como un enlace que el administrador copia y entrega a mano, y enviada además por correo cuando exista el adaptador de C7; sin `FORCE` y con función `SECURITY DEFINER` de consulta por hash, con `search_path` fijo; nunca se busca a la persona por correo. La API de administración de Auth0 se llama con un token M2M guardado en caché (el plan gratuito da 1.000 tokens M2M al mes); aquí se decide si se desactiva el registro abierto (*Disable Sign Ups*), lo que obligaría a crear las cuentas de los invitados desde el backend
-- [ ] **C9. Aceptar invitación** — función `SECURITY DEFINER` que consume el token y crea la `membership` de forma atómica, exigiendo `email_verified` y correo igual al de la invitación (normalizado); el formulario lleva dos casillas separadas, términos y privacidad, nunca una sola *(seguridad)*
+- [ ] **C6. Buzón de notificaciones** — tabla `notification` con canal (hoy solo la aplicación), marca de importante y fecha de lectura; endpoints para listar y marcar como leídas. La abstracción de canales queda lista para WhatsApp en la Fase 2. No hay correo en el MVP
+- [ ] **C8. Tabla `invitation` y emisión** — el propietario escribe el correo de la persona, el rol y, para roles de cliente, el cliente; se devuelve un enlace de un solo uso con expiración que se muestra una vez y se comparte a mano, sin enviar nada. Se guarda el hash del token, con revocación; sin `FORCE` y con función `SECURITY DEFINER` de consulta por hash, con `search_path` fijo; nunca se busca a la persona por correo
+- [ ] **C9. Aceptar invitación** — función `SECURITY DEFINER` que consume el token y crea la `membership` de forma atómica, exigiendo `email_verified` (lo garantiza Google) y correo igual al de la invitación (normalizado); un enlace usado, vencido o revocado se rechaza; el formulario lleva dos casillas separadas, términos y privacidad, nunca una sola *(seguridad)*
 - [ ] **C10. Pruebas de autorización** — con tokens JWT simulados, verificar que un aprobador no puede editar y que un rol de cliente no ve otros clientes, incluida la segunda frontera por `client_id` dentro de la política; que un editor no puede aprobar ni rechazar, que un colaborador solo comenta, y que una decisión del propietario queda marcada como hecha en nombre del cliente
 - [ ] **C11. Escaneo de dependencias** — Dependabot activo y OWASP dependency-check semanal, con llave de la NVD en secrets *(seguridad)*
 - [ ] **C12. Registro de aceptación de términos** — tabla con usuario, documento, versión aceptada, fecha e IP; se versiona porque al cambiar los términos hay que saber quién aceptó cuál; la IP no va a los logs *(bloquea el registro de usuarios y C9)*
-- [ ] **C13. Rate limit** — en login, aceptar invitación y aprobación; en memoria basta para el MVP *(seguridad)*
+- [ ] **C13. Rate limit** — en login, aceptar invitación, aprobación y crear workspace; en memoria basta para el MVP *(seguridad)*
+- [ ] **C14. Primer ingreso y límite de workspaces** — una función `SECURITY DEFINER`, con `search_path` fijo, crea el `workspace` y la `membership` de propietario de forma atómica y verifica `max_workspaces` bloqueando la fila de `app_user`; el perfil (nombre, apellido, industria) se guarda con ella. Pruebas: el segundo workspace se rechaza, también con dos peticiones simultáneas; una persona sin `membership` no llega a ningún otro endpoint *(seguridad)*
+- [ ] **C15. Administrador de la plataforma, primera parte** — la marca de `app_user` se asigna a mano con SQL y nunca por la API; funciones `SECURITY DEFINER` acotadas para listar workspaces y cambiar `max_workspaces`, que verifican la marca en la base. Pruebas: un usuario normal no puede ejecutarlas por ningún medio, y un claim falso en el token no basta. La entrada a un workspace ajeno se completa en E13, que crea `audit_log` *(seguridad)*
 
-La invitación debe invalidarse al usarse, no solo al expirar. Un token reutilizable en un correo reenviado es una puerta abierta. Y no basta con el token: el correo verificado de quien acepta debe coincidir con el de la invitación, o el token pasa a ser un bearer. El límite de intentos vive en C13, no en la función: un hash que no existe no tiene fila donde contar.
+C7 (adaptador de correo) salió del MVP y se conserva el número para no renumerar: vive en la Fase 2.
 
-C11 espera hasta aquí a propósito: escanear dependencias en la semana 2, con cuatro librerías, no dice nada. Va en un workflow aparte del CI, porque tarda y falla por CVE publicadas anoche, no por tu commit. C6 y C7 entran antes que las invitaciones porque una invitación sin forma de enviarla no sirve; mientras C7 espere al dominio, el enlace copiable de C8 cubre esa forma de entrega.
+La invitación debe invalidarse al usarse, no solo al expirar. Un enlace reutilizable y reenviado es una puerta abierta. Y no basta con el token: el correo verificado de quien acepta debe coincidir con el de la invitación, o el enlace pasa a ser un bearer. El límite de intentos vive en C13, no en la función: un hash que no existe no tiene fila donde contar.
+
+C11 espera hasta aquí a propósito: escanear dependencias en la semana 2, con cuatro librerías, no dice nada. Va en un workflow aparte del CI, porque tarda y falla por CVE publicadas anoche, no por tu commit. C6 entra antes que las invitaciones porque el buzón es donde llegan los avisos; sin correo, el enlace copiable de C8 es la forma de entrega.
 
 ## Bloque D — Tenencia
 
@@ -114,7 +117,7 @@ Clientes, marcas y cuentas. El primero que vas a poder usar con datos reales.
 - [ ] **D6. Tabla `social_account` con RLS** — plataforma, identificador de cuenta, estado
 - [ ] **D7. CRUD de cuentas sociales** — sin credenciales todavía, solo el registro
 - [ ] **D8. Cargar tus tres clientes reales** — Iglesia sin Límites con dos marcas, Beraca con una marca y dos cuentas, Altocar
-- [ ] **D9. Respaldo automático de PostgreSQL** — con prueba de restauración; entra en el momento en que cargues tus clientes reales *(seguridad, bloquea G12)*
+- [ ] **D9. Respaldo automático de PostgreSQL** — con prueba de restauración; entra en el momento en que cargues tus clientes reales. **La estrategia (frecuencia, destino, prueba de restauración) se define al empezar el bloque D, antes de D8** *(seguridad, bloquea G12)*
 
 Las pruebas de aislamiento de D1 repiten las de `TablaDeNegocioRlsTest` (B4 a B6 y B11), que hoy corren sobre una tabla de prueba. Cuando exista `client`, conviene convertir esa clase en una base parametrizada por tabla, para que cada tabla de negocio nueva la reutilice con pocas líneas. `PoliticasRlsTest` ya vigila por sí sola que toda tabla con `workspace_id` tenga RLS activa, forzada y con `USING` y `WITH CHECK`; no prueba el comportamiento.
 
@@ -138,7 +141,7 @@ El corazón del producto: piezas, estados, versiones y aprobaciones.
 - [ ] **E10. Crear versión** — el número de ronda se calcula solo, nunca lo manda el cliente
 - [ ] **E11. Tabla `review`** — decisión, revisor, comentario, fecha
 - [ ] **E12. Aprobar o rechazar** — el rechazo mueve la pieza a edición y habilita la ronda siguiente; el propietario puede decidir en nombre del cliente y la decisión queda marcada con `decided_on_behalf`
-- [ ] **E13. Tabla `audit_log`** — solo inserciones, alimentada por los cambios de estado y las decisiones *(seguridad)*
+- [ ] **E13. Tabla `audit_log`** — solo inserciones, alimentada por los eventos clave (cambios de estado, decisiones, creación de workspace, aceptación de invitaciones, cambios de límite y borrados). Aquí se completa C15: el administrador de la plataforma puede entrar a un workspace ajeno en el paso que valida `X-Workspace-Id`, y cada petición suya deja una fila ([ADR 0006](adr/0006-registro-abierto-administrador-de-plataforma-y-buzon.md)). Prueba: sin fila no hay acceso, y un usuario normal no puede entrar a un workspace ajeno *(seguridad)*
 - [ ] **E14. Pruebas del ciclo completo** — crear pieza, versión, rechazo, versión 2, aprobación
 - [ ] **E15. Tabla `comment` y comentar** — opinión suelta sobre una versión, con `workspace_id`, RLS y la segunda frontera por `client_id`. El colaborador la escribe, el editor y el propietario la leen, y no cambia el estado de la pieza. `text` se puede vaciar como `review.comment`. Prueba: un colaborador comenta y no puede aprobar. Se hace después de E11 y antes de E14, como B9 y B10 (necesita C5)
 
@@ -163,8 +166,8 @@ El registro de archivos y la subida a S3. El NAS queda para la Fase 2.
 - [ ] **F11. Límite y validación de tamaño** — 500 MB para entregables; los crudos usan multiparte, y el tope duro de una subida simple es 5 GB
 - [ ] **F12. Miniatura del entregable** — ffmpeg sobre el fotograma al 10% de la duración, leyendo por rango desde S3, dentro de la confirmación de subida; con tiempo máximo (si no se puede, la pieza queda sin miniatura y la subida no falla) y lectura de la cola si el índice del MP4 está al final
 - [ ] **F13. Borrado selectivo de un cliente** — API que lista todo lo suyo y elimina lo que el administrador escoja, dejando fila de registro *(seguridad)*
-- [ ] **F14. Reporte semanal de retención vencida** — lista de archivos cuyo plazo de retención ya venció, enviada por el canal de notificaciones; necesita `asset` (F1), los campos de retención de D3 y las notificaciones de C6 y C7
-- [ ] **F15. Probar Cloudflare R2 con SHA-256** — con un bucket real (activarlo puede pedir tarjeta; se queda dentro del plan gratuito), verificar: URL prefirmada de subida con `x-amz-checksum-sha256` firmado, que el checksum se pueda leer después (`ChecksumMode`), lectura por rango (para F12) y subida multiparte con su checksum compuesto. La documentación oficial de R2 solo lista `Content-MD5` y no documenta SHA-256. **Se hace justo después de F3 y antes de F4 y F6** *(bloquea F4 y F6)*. Si falla: o se adapta el diseño a `Content-MD5` (cambia la sección "Archivos" de `modelo-datos.md` y el ADR) o se elige otro proveedor compatible con S3. El resultado va en un ADR
+- [ ] **F14. Reporte semanal de retención vencida** — lista de archivos cuyo plazo de retención ya venció, enviada al buzón de notificaciones; necesita `asset` (F1), los campos de retención de D3 y el buzón de C6
+- [ ] **F15. Probar Cloudflare R2 con SHA-256** — con un bucket real (activarlo puede pedir tarjeta; se queda dentro del plan gratuito), verificar: URL prefirmada de subida con `x-amz-checksum-sha256` firmado, que el checksum se pueda leer después (`ChecksumMode`), lectura por rango (para F12) y subida multiparte con su checksum compuesto. La documentación oficial de R2 solo lista `Content-MD5` y no documenta SHA-256. **Se hace justo después de F3 y antes de F4 y F6, y es el momento de validar el proveedor de S3 que se había aplazado** *(bloquea F4 y F6)*. Si falla: o se adapta el diseño a `Content-MD5` (cambia la sección "Archivos" de `modelo-datos.md` y el ADR) o se elige otro proveedor compatible con S3. El resultado va en un ADR
 
 MinIO habla el mismo protocolo que S3 y corre en tu máquina sin costo. Al pasar a producción solo cambia la configuración.
 
@@ -174,8 +177,8 @@ F9 cierra el círculo: RLS protege la base, pero una URL prefirmada vive fuera d
 
 Las pantallas mínimas para operar el flujo. Funcionalidad antes que estética.
 
-- [ ] **G0. Prototipo para validar con los funcionales** — pantallas navegables con datos de ejemplo, sin backend, para que el equipo funcional pruebe el flujo y los roles antes del bloque G. Hecho como artefacto de claude.ai el 2026-10-31; falta decidir si se guarda una copia en el repositorio. No sustituye a G1 a G13 *(no bloquea)*
-- [ ] **G1. Proyecto Next.js y autenticación** — login contra el proveedor OIDC y sesión persistente, con dos zonas de rutas, `/agencia` y `/cliente` ([ADR 0005](adr/0005-roles-de-agencia-y-cliente-y-comentarios.md))
+- [ ] **G0. Prototipo para validar con los funcionales** — pantallas navegables con datos de ejemplo, sin backend, para que el equipo funcional pruebe el flujo y los roles antes del bloque G. Hecho como artefacto de claude.ai el 2026-10-31; falta decidir si se guarda una copia en el repositorio. El 2026-11-03 se hizo aparte una maqueta del acceso (ingreso con Google, primer ingreso, invitaciones por enlace, buzón y administración de la plataforma). No sustituye a G1 a G16 *(no bloquea)*
+- [ ] **G1. Proyecto Next.js y autenticación** — inicio de sesión con Google (Auth.js con el proveedor de Google), sesión persistente y renovación del token, que dura más o menos una hora; con dos zonas de rutas, `/agencia` y `/cliente` ([ADR 0004](adr/0004-proveedores-de-identidad-y-correo.md), [ADR 0005](adr/0005-roles-de-agencia-y-cliente-y-comentarios.md))
 - [ ] **G2. Cliente de API tipado** — generado desde OpenAPI, para no escribir tipos a mano
 - [ ] **G3. Pantalla de clientes y marcas** — listar, crear, editar, incluidos propiedad y retención
 - [ ] **G4. Pantalla de cuentas sociales** — asociadas a su marca
@@ -183,11 +186,14 @@ Las pantallas mínimas para operar el flujo. Funcionalidad antes que estética.
 - [ ] **G6. Detalle de pieza** — datos, destinos, historial de versiones
 - [ ] **G7. Subir versión** — subida directa a S3 con la URL prefirmada, con barra de progreso
 - [ ] **G8. Vista de revisión del cliente** — ver el video y aprobar o pedir cambios con comentario
-- [ ] **G9. Pantalla de invitaciones** — invitar a una persona a un cliente con su rol
+- [ ] **G9. Pantalla de invitaciones** — generar el enlace para una persona, con su rol y su cliente; copiarlo, ver su estado y revocarlo
 - [ ] **G10. Pantalla de borrado selectivo** — ver todo lo de un cliente y escoger qué eliminar, con confirmación *(seguridad)*
 - [ ] **G11. Monitoreo y logs centralizados** — un servicio alojado donde mirar los logs ya estructurados de A11
 - [ ] **G12. Despliegue continuo** — staging automático desde `main`, producción con aprobación manual *(seguridad)*
 - [ ] **G13. Prueba de humo de extremo a extremo** — Playwright: login, subir versión, aprobar. Una sola, no una suite
+- [ ] **G14. Primer ingreso** — formulario de perfil (nombre y apellido que vienen de Google, industria) y creación del workspace (C14), con el aviso del límite de un workspace por usuario
+- [ ] **G15. Buzón de notificaciones** — lista con filtros de todos, sin leer e importantes, marcar como leída y contador en el menú (C6)
+- [ ] **G16. Administración de la plataforma** — solo para el administrador: workspaces, límite por usuario editable y entrada a un workspace ajeno con su registro (C15 y E13)
 
 G8 es la pantalla que más importa: es la única que ven tus clientes y la que reemplaza los audios de WhatsApp. Debe funcionar bien en celular.
 
@@ -201,7 +207,7 @@ No se proyectan semanas. La estimación inicial (dos a tres tareas por semana) q
 | --- | --- |
 | A | Un backend que arranca, migraciones, CI en verde y logs |
 | B | Aislamiento probado, el cimiento de seguridad |
-| C | Login real, roles, invitaciones por correo y escaneo |
+| C | Login con Google, registro con su workspace, roles, invitaciones por enlace, buzón, administrador y escaneo |
 | D | Tus tres clientes cargados de verdad |
 | E | El flujo completo funcionando por API |
 | F | Subida, descarga, miniaturas y borrado selectivo |
@@ -217,6 +223,21 @@ No se proyectan semanas. La estimación inicial (dos a tres tareas por semana) q
 
 El orden importa más que la velocidad. Los bloques A y B no se saltan ni se recortan. Si hay que recortar, recorta del bloque G: una pantalla fea que funciona sirve; un aislamiento a medias, no.
 
+## Decisiones aplazadas y cuándo retomarlas
+
+Ninguna se asume. Cada una tiene su momento para volver a sentarse a decidirla:
+
+| Qué | Cuándo |
+| --- | --- |
+| Textos legales (términos, privacidad, cookies) | Antes de C12 |
+| Comprar el dominio | Al cerrar el bloque C, antes del G. Lo piden la pantalla de consentimiento de Google en producción, el despliegue y la verificación ante Meta |
+| Estrategia de respaldo de PostgreSQL | Al empezar el bloque D, antes de D8 |
+| Proveedor de almacenamiento S3 (probar R2 con SHA-256) | Al empezar el bloque F, en F15 |
+| Verificar los riesgos de la pantalla de consentimiento de Google y de la Ley 1581 | En C1 y antes de D8 |
+| Verificación de empresa ante Meta | Antes de la Fase 2 |
+| Umbral de registro en el RNBD | Antes de tener datos reales de terceros |
+| Proveedor de alojamiento | Antes de G12 |
+
 ## Fases siguientes
 
 Enunciadas, no descompuestas.
@@ -225,7 +246,9 @@ Enunciadas, no descompuestas.
 
 Calendario editorial, formularios de solicitud de grabación, sesiones de grabación, panel de pendientes, ideas y guiones. Integración del NAS con sincronización y verificación por checksum.
 
-Adaptador de WhatsApp para los avisos de aprobación: requiere cuenta de empresa verificada ante Meta y plantillas aprobadas una por una, así que el trámite empieza antes que el código.
+Adaptador de WhatsApp solo para los avisos importantes, que ya están marcados en `notification` desde C6; el resto se queda en el buzón. Requiere cuenta de empresa verificada ante Meta y plantillas aprobadas una por una, así que el trámite empieza antes que el código.
+
+Adaptador de correo (antes C7): Resend u otro proveedor, con plantillas y registro de envíos. Necesita un dominio propio comprado y acceso a su DNS para verificar el remitente (SPF, DKIM). Se retoma cuando exista el dominio y haya una razón para enviar correo.
 
 ### Fase 3 — Asistencia con IA
 
@@ -239,7 +262,7 @@ APIs de Instagram, TikTok y YouTube, publicación automatizada, lectura de métr
 
 - [ ] Documentación de tratamiento de datos personales en `docs/`
 - [ ] Contrato de servicio con propiedad de archivos y retención, y autorizaciones de uso de imagen firmadas por quienes aparecen en video
-- [ ] Redactar los términos y condiciones, la política de privacidad y la política de cookies (C12 necesita el texto de las dos primeras antes del registro de usuarios)
+- [ ] Redactar los términos y condiciones, la política de privacidad y la política de cookies (C12 necesita el texto de las dos primeras antes del registro de usuarios). La política de privacidad debe decir que el administrador de la plataforma puede acceder al contenido de los workspaces y que la identidad pasa por Google
 - [ ] Verificar los derechos de las imágenes que usa el frontend
 - [ ] Mantener las acciones de GitHub fijadas por SHA, no por etiqueta *(seguridad)*
 

@@ -91,6 +91,8 @@ Nunca marques una tarea como terminada con pruebas fallando o implementación pa
 
 No las asumas. Si una tarea depende de alguna, pregunta:
 
-- Proveedores de identidad (Auth0) y de correo (Resend): propuestos en el ADR 0004; verifica sus riesgos abiertos antes de C7 y de D8
-- Proveedor de almacenamiento S3 en producción
-- Alcance del `audit_log`: solo eventos clave o toda escritura
+- Proveedor de almacenamiento S3 en producción: se valida al empezar el bloque F (tarea F15)
+- Estrategia de respaldo de PostgreSQL: se define al empezar el bloque D, antes de D8
+- Compra del dominio: al cerrar el bloque C, antes del G
+
+Ya decididas: inicio de sesión solo con Google, sin correo en el MVP (ADR 0004); registro abierto, administrador de la plataforma, buzón y alcance de `audit_log` (ADR 0006). Los riesgos abiertos del ADR 0004 se verifican en C1 y antes de D8.

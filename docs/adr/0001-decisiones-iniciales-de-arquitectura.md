@@ -45,7 +45,7 @@ Este ADR recoge las decisiones fundacionales ya tomadas. Cada una se puede reemp
 | 17 | El NAS es caché de trabajo, nunca la única copia | NAS como respaldo | Dos bahías dan redundancia ante un disco dañado, no respaldo ante robo, incendio o ransomware |
 | 18 | Solo miniatura del entregable, sin versión liviana | Transcodificación para revisión | El entregable ya es un video de redes, liviano de por sí |
 | 19 | Miniatura generada dentro de la confirmación de subida | Trabajos en segundo plano | ffmpeg lee el inicio del archivo por rango y tarda segundos |
-| 20 | Abstracción de notificaciones, con correo como primer canal | Enviar correos directo | WhatsApp y correo tienen reglas distintas y conviven |
+| 20 | Abstracción de notificaciones, con el buzón de la aplicación como primer canal (antes: correo; ver [ADR 0006](0006-registro-abierto-administrador-de-plataforma-y-buzon.md)) | Enviar correos directo | WhatsApp y los demás canales tienen reglas distintas y conviven |
 | 21 | Testcontainers obligatorio para pruebas de integración | Base en memoria | Las políticas de RLS solo se pueden probar contra un PostgreSQL real |
 
 ## Consecuencias
@@ -59,9 +59,9 @@ Este ADR recoge las decisiones fundacionales ya tomadas. Cada una se puede reemp
 
 No están decididas y no se asumen. Cada una tendrá su ADR cuando se resuelva:
 
-- Proveedor de identidad y proveedor de correo transaccional: propuestos en el [ADR 0004](0004-proveedores-de-identidad-y-correo.md) (Auth0 y Resend), con riesgos aún por verificar
-- Proveedor de almacenamiento S3 en producción
-- Alcance del `audit_log`: solo eventos clave o toda escritura
-- Estrategia de respaldo de PostgreSQL (obligatoria antes de datos reales)
+- Proveedor de almacenamiento S3 en producción (se valida al empezar el bloque F, tarea F15)
+- Estrategia de respaldo de PostgreSQL, obligatoria antes de datos reales (se define al empezar el bloque D, antes de D8)
 - Umbral de registro en el RNBD ante la SIC
 - Verificación de empresa ante Meta, para WhatsApp en la Fase 2
+
+Ya resueltas: el proveedor de identidad (Google, [ADR 0004](0004-proveedores-de-identidad-y-correo.md)) y el alcance de `audit_log` ([ADR 0006](0006-registro-abierto-administrador-de-plataforma-y-buzon.md)).

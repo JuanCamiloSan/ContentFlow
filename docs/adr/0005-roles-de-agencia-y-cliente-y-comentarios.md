@@ -27,6 +27,7 @@
 
 - Quien edita no aprueba su propio trabajo. El Editor no puede disparar la transición de `En aprobación` a `Aprobado` ni a `En edición`; esa transición solo sale de una decisión en `review`.
 - El Propietario es el administrador de la agencia. No se crea un rol "Administrador" aparte: hasta que haya un empleado de confianza con menos poder que el dueño, serían lo mismo.
+- No confundir con el **administrador de la plataforma**, que es el dueño del producto y administra todos los workspaces. No es un rol del workspace ni tiene `membership`; ver el [ADR 0006](0006-registro-abierto-administrador-de-plataforma-y-buzon.md).
 
 ### 2. Decidir en nombre del cliente
 

@@ -1,6 +1,6 @@
 # ContentFlow — Modelo de datos y seguridad
 
-Actualizado: 2026-10-31
+Actualizado: 2026-11-03
 
 Define cómo ContentFlow guarda la información y cómo impide que los datos de un cliente se mezclen con los de otro.
 
@@ -62,10 +62,10 @@ La base guarda la ficha del archivo: nombre, tamaño, dónde está, su huella di
 | Tabla | Guarda | Nota de diseño |
 | --- | --- | --- |
 | `workspace` | El espacio de cada agencia | Única tabla sin `workspace_id`: ella es la frontera |
-| `app_user` | Personas con cuenta | Vive fuera del workspace: una persona puede pertenecer a varios |
-| `membership` | Qué persona pertenece a qué workspace y con qué rol | El rol es uno de cuatro: propietario, editor, aprobador o colaborador. También limita a un cliente concreto cuando el rol lo requiere |
-| `invitation` | Invitaciones pendientes | Token de un solo uso con expiración. Excepción al aislamiento: se consulta por función `SECURITY DEFINER` (ADR 0003) |
-| `notification` | Avisos enviados y por enviar | Canal por tipo de evento, preferencia por usuario |
+| `app_user` | Personas con cuenta de Google | Vive fuera del workspace: una persona puede pertenecer a varios. Guarda `max_workspaces` (1 por defecto) y la marca de administrador de la plataforma, que se asigna a mano con SQL (ADR 0006) |
+| `membership` | Qué persona pertenece a qué workspace y con qué rol | El rol es uno de cuatro: propietario, editor, aprobador o colaborador. También limita a un cliente concreto cuando el rol lo requiere. El administrador de la plataforma no tiene fila aquí |
+| `invitation` | Invitaciones pendientes | Hash del token (un solo uso, con expiración), correo esperado, rol y cliente. Se entrega como un enlace que copia el propietario; la aplicación no envía correo. Excepción al aislamiento: se consulta por función `SECURITY DEFINER` (ADR 0003) |
+| `notification` | Avisos del buzón de la aplicación | Canal (hoy solo la aplicación), marca de importante y fecha de lectura. WhatsApp se añade en la Fase 2, solo para los importantes |
 | `client` | Empresa cliente | Relación comercial, más propiedad y retención pactadas |
 | `brand` | Marca dentro de un cliente | Perfil creativo: industria, metas, tono, público |
 | `social_account` | Cuenta de Instagram, TikTok o YouTube | Credenciales cifradas, nunca en texto plano |
@@ -76,7 +76,7 @@ La base guarda la ficha del archivo: nombre, tamaño, dónde está, su huella di
 | `comment` | Opinión suelta sobre una versión | Texto, autor y versión. No aprueba ni mueve la pieza. Lo escribe el colaborador y lo lee la agencia |
 | `asset` | Ficha de cada archivo | Nombre, tipo, tamaño, checksum y su algoritmo, ubicación, miniatura |
 | `deletion_record` | Qué se borró, quién y cuándo | Sobrevive al borrado: es la prueba de cumplimiento |
-| `audit_log` | Registro de quién hizo qué | Solo inserciones, nunca se edita ni borra. Solo identificadores y enumeraciones, sin llave a `app_user` |
+| `audit_log` | Registro de quién hizo qué | Solo inserciones, nunca se edita ni borra. Solo identificadores y enumeraciones, sin llave a `app_user`. Eventos clave y accesos del administrador de la plataforma, no toda escritura (ADR 0006) |
 
 ### Reglas comunes
 
@@ -221,6 +221,12 @@ SELECT set_config('app.workspace_id', ?, true);
 
 El tercer argumento `true` equivale a `SET LOCAL`: el valor muere al terminar la transacción. Con conexiones reutilizadas de un pool, un `SET` normal dejaría el workspace anterior activo para la siguiente petición. `SET LOCAL` no admite parámetros, por eso se usa la función: concatenar el valor en la sentencia es la puerta a una inyección.
 
+### Sin workspace y administrador de la plataforma
+
+El registro es abierto ([ADR 0006](adr/0006-registro-abierto-administrador-de-plataforma-y-buzon.md)), así que existe una persona autenticada sin `membership`. No tiene workspace que fijar: solo puede crear el suyo o aceptar una invitación, ambas por funciones `SECURITY DEFINER`. Crear el workspace y la `membership` de propietario es una sola operación atómica que verifica `max_workspaces` bloqueando la fila de `app_user`, para que dos peticiones simultáneas no superen el límite.
+
+El administrador de la plataforma es una marca en `app_user`, no un claim del token. Para trabajar dentro de un workspace ajeno, el paso que valida `X-Workspace-Id` contra `membership` lo acepta para cualquier workspace y escribe una fila en `audit_log`. Después fija `app.workspace_id` como siempre y las políticas normales aplican igual. Para listar workspaces y cambiar límites usa funciones `SECURITY DEFINER` acotadas. Nunca hay un rol con `BYPASSRLS`.
+
 ### Los tres roles de PostgreSQL
 
 | Rol | Para qué | Permisos |
@@ -344,7 +350,7 @@ La versión con contexto y consecuencias vive en [`adr/0001-decisiones-iniciales
 | Monolito modular | Microservicios | Con 5 a 8 horas semanales, la complejidad operativa no se sostiene |
 | Capa de marca separada del cliente | Perfil creativo en el cliente | Dos de tres clientes actuales tienen marcas con tono distinto |
 | Pieza a cuenta, muchos a muchos | Una cuenta por pieza | Beraca ya publica la misma pieza en dos cuentas |
-| Proveedor OIDC externo | Autenticación propia | Recuperación, verificación y sesiones ya resueltas y auditadas |
+| Proveedor OIDC externo: inicio de sesión solo con Google, sin intermediario ([ADR 0004](adr/0004-proveedores-de-identidad-y-correo.md)) | Autenticación propia, o usuario y contraseña | Recuperación, verificación y sesiones ya resueltas y auditadas; sin correos que enviar ni dominio que comprar |
 | UUID como identificador | Entero secuencial | Un id expuesto no revela volumen ni permite adivinar otros |
 | Versiones inmutables | Sobrescribir el archivo | Sin historial no hay evidencia de qué se aprobó |
 | `app_user` fuera del workspace | Usuario por workspace | Una persona puede trabajar con varias agencias |
@@ -363,17 +369,23 @@ La versión con contexto y consecuencias vive en [`adr/0001-decisiones-iniciales
 | Roles de agencia y de cliente separados; el propietario puede aprobar en nombre del cliente y queda marcado | Un solo rol de aprobación, o que el editor también apruebe | Quien edita no debe aprobar su propio trabajo, y la bitácora debe distinguir quién decidió de verdad ([ADR 0005](adr/0005-roles-de-agencia-y-cliente-y-comentarios.md)) |
 | `comment` separado de `review` | Guardar las opiniones como decisiones | Opinar no es decidir, y el colaborador no tiene dónde dejar su comentario sin aprobar ni rechazar |
 | Vistas de agencia y de cliente, con la seguridad en la base | Seguridad por vista, o dos aplicaciones | La vista mejora la experiencia, pero solo RLS y el backend impiden ver lo ajeno |
+| Registro abierto; invitación solo para unirse a un workspace; un workspace por usuario, ampliable | Registro cerrado con cuentas creadas desde el backend | Una agencia nueva debe poder registrarse sola; el límite se convierte en el plan más adelante ([ADR 0006](adr/0006-registro-abierto-administrador-de-plataforma-y-buzon.md)) |
+| Administrador de la plataforma con marca en la base y entrada auditada a cada workspace | Claim del token, `BYPASSRLS` o una rama en cada política | La base es la fuente de verdad sobre privilegios, y una sola rama es más difícil de olvidar que una por tabla |
+| Buzón dentro de la aplicación, con canal e importancia en `notification` | Correo como canal del MVP | Sin dominio ni proveedor de correo; WhatsApp se añade después como adaptador |
+| Invitación por enlace copiable, con correo verificado que debe coincidir | Enlace sin comprobación, o envío por correo | El enlace reenviado no debe ser un cheque al portador, y no se envía nada por correo |
+| `audit_log` con eventos clave y accesos del administrador | Registrar toda escritura | Volumen y datos que se quieren poder borrar |
 
 ## Preguntas abiertas
 
-Ninguna bloquea el inicio del MVP. Las dos primeras se necesitan antes del bloque C.
+Ninguna bloquea el inicio del bloque C.
 
-- [ ] **Proveedor de identidad.** Propuesto: Auth0 ([ADR 0004](adr/0004-proveedores-de-identidad-y-correo.md)); faltan por verificar sus riesgos abiertos
-- [ ] **Proveedor de correo transaccional.** Propuesto: Resend (ADR 0004). Necesita un dominio propio antes de C7
-- [ ] **Proveedor de almacenamiento S3.** Candidato: Cloudflare R2. Afecta costo y latencia, y puede afectar el modelo: su documentación no lista el checksum SHA-256 que pide `asset`. Se resuelve en la tarea F15 del backlog
-- [ ] **Alcance del `audit_log`.** Solo eventos clave o toda escritura
+- [x] **Proveedor de identidad.** Resuelto: Google directo ([ADR 0004](adr/0004-proveedores-de-identidad-y-correo.md)). Quedan por verificar sus riesgos en C1 y antes de D8
+- [x] **Proveedor de correo transaccional.** Resuelto: no hay en el MVP; avisos en el buzón e invitaciones por enlace ([ADR 0006](adr/0006-registro-abierto-administrador-de-plataforma-y-buzon.md))
+- [x] **Alcance del `audit_log`.** Resuelto: eventos clave y accesos del administrador (ADR 0006)
+- [ ] **Compra del dominio.** Aplazada hasta cerrar el bloque C, antes del G. Lo piden la pantalla de consentimiento de Google en producción, el despliegue y la verificación ante Meta
+- [ ] **Proveedor de almacenamiento S3.** Candidato: Cloudflare R2. Afecta costo y latencia, y puede afectar el modelo: su documentación no lista el checksum SHA-256 que pide `asset`. Se valida al empezar el bloque F, en la tarea F15
+- [ ] **Estrategia de respaldo de Postgres.** Frecuencia, destino y prueba de restauración. Se define al empezar el bloque D, antes de D8
 - [ ] **Umbral de registro en el RNBD.** Verificar el vigente ante la SIC
-- [ ] **Estrategia de respaldo de Postgres.** Frecuencia, destino y prueba de restauración
 - [ ] **Verificación de empresa ante Meta.** Para el adaptador de WhatsApp de la Fase 2
 
 El respaldo de Postgres no es opcional desde que entren datos reales de clientes, y bloquea el despliegue continuo.

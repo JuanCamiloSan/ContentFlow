@@ -15,14 +15,17 @@ docs/               arquitectura, decisiones (ADR), modelo de datos
 
 ## Estado
 
-Existen la estructura, PostgreSQL local y un backend con `GET /health`. El frontend y el resto de la
-infraestructura están pendientes (ver el backlog).
+Los bloques A (cimientos) y B (aislamiento) están cerrados: monorepo, PostgreSQL local con tres roles y
+Row Level Security, un backend con `GET /health`, Flyway, logs estructurados, CI y el contexto de sesión
+por transacción, con sus pruebas de aislamiento. El siguiente es el bloque C (identidad, con inicio de
+sesión de Google). El frontend y el resto de la infraestructura están pendientes (ver el backlog).
 
 ## Documentación
 
 - [`docs/prompt-proyecto.md`](docs/prompt-proyecto.md) — alcance, arquitectura y cómo trabajar
 - [`docs/modelo-datos.md`](docs/modelo-datos.md) — tablas, RLS, propiedad y borrado
 - [`docs/backlog.md`](docs/backlog.md) — tareas, dependencias y qué sigue
+- [`docs/adr/`](docs/adr/) — decisiones de arquitectura (ADR 0001 a 0006)
 - [`CLAUDE.md`](CLAUDE.md) — reglas para trabajar con Claude Code
 
 ## Ejecución local

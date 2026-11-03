@@ -1,6 +1,6 @@
 # ContentFlow — Prompt de proyecto (v2)
 
-Actualizado: 2026-10-31
+Actualizado: 2026-11-03
 
 ## Contexto y objetivo
 
@@ -53,13 +53,17 @@ Beraca lo usa hoy: la misma pieza sale en las dos sedes. Se prevé también el c
 
 ## Usuarios, roles y accesos
 
-Todo usuario se registra y tiene identidad persistente, incluido el cliente que aprueba. No se usan enlaces anónimos de aprobación.
+Todo usuario se registra y tiene identidad persistente, incluido el cliente que aprueba. No se usan enlaces anónimos de aprobación ni de vista: ver un video también exige iniciar sesión.
 
 La razón: el cliente llena un formulario de onboarding con industria, metas y necesidades, que alimenta la generación asistida por IA. Además entra a ver sus videos y a consultar su resumen de métricas. Nada de eso funciona sin cuenta.
 
-### Cómo entra un cliente
+### Cómo entra cada persona
 
-Por invitación desde el workspace, nunca por registro abierto. Así ninguna cuenta queda huérfana sin empresa asociada.
+El registro es abierto y se hace con una cuenta de Google. Tras el primer ingreso, la persona completa un formulario de perfil y crea su workspace; queda como Propietario. Por ahora puede crear **un workspace** por usuario; el administrador de la plataforma puede ampliar ese límite. Más adelante lo marcará el plan que pague.
+
+Los demás roles (Editor, Aprobador, Colaborador) entran solo por invitación. El Propietario genera un enlace de un solo uso, con vencimiento, y lo comparte por su cuenta. Al abrirlo, la persona inicia sesión con Google y su correo verificado debe coincidir con el de la invitación. Así ninguna cuenta de cliente queda sin empresa asociada.
+
+Detalle y alternativas descartadas en el [ADR 0006](adr/0006-registro-abierto-administrador-de-plataforma-y-buzon.md).
 
 ### Roles
 
@@ -74,11 +78,15 @@ Los dos primeros roles son de la agencia y los dos últimos son del cliente. Son
 
 Un ejemplo del reparto en el cliente: la persona que maneja las redes de una cafetería comenta "el logo sale muy chico" (Colaborador), y el dueño decide si se aprueba (Aprobador).
 
+### Administrador de la plataforma
+
+Es el dueño del producto y no es un rol del workspace. Puede ver y administrar todos los workspaces, incluido su contenido, y cambiar el límite de workspaces por usuario. Su acceso lo impone la base de datos, no una afirmación del token, y cada acceso a un workspace ajeno queda en la bitácora de auditoría. Ver [ADR 0006](adr/0006-registro-abierto-administrador-de-plataforma-y-buzon.md).
+
 ### Autenticación
 
-No se escribe el sistema de autenticación a mano. Se usa un proveedor OIDC externo detrás de Spring Security como resource server. El propuesto es Auth0 ([ADR 0004](adr/0004-proveedores-de-identidad-y-correo.md)).
+No se escribe el sistema de autenticación a mano. Se usa un proveedor OIDC externo detrás de Spring Security como resource server: el inicio de sesión es solo con Google, validado directamente por el backend ([ADR 0004](adr/0004-proveedores-de-identidad-y-correo.md)).
 
-Al tener registro propio se asumen recuperación de contraseña, verificación de correo, manejo de sesiones y bloqueo por intentos fallidos. Un proveedor ya resuelto evita implementar y auditar todo eso.
+Con Google no hay contraseñas propias ni correos de verificación o recuperación que la aplicación envíe: Google verifica el correo y resuelve la recuperación de acceso. Eso evita implementar y auditar todo eso, y no exige un dominio propio.
 
 ### Atribución de aprobaciones
 
@@ -96,7 +104,7 @@ No se construye todo desde el principio. El MVP debe permitir gestionar un flujo
 - Registro y carga de archivos audiovisuales, con miniatura del entregable
 - Estados de producción con transiciones controladas
 - Versiones, comentarios y aprobación atribuida
-- Notificaciones por correo, con la abstracción lista para otros canales
+- Buzón de notificaciones dentro de la aplicación, con la abstracción lista para otros canales
 - Borrado manual y selectivo de los datos de un cliente, con registro
 - Vista de lista o tablero del contenido
 
@@ -108,7 +116,8 @@ No se construye todo desde el principio. El MVP debe permitir gestionar un flujo
 - Panel de tareas y contenido pendiente
 - Organización de ideas y guiones
 - Integración del NAS con sincronización y verificación por checksum
-- Adaptador de WhatsApp para avisos de aprobación
+- Adaptador de WhatsApp, solo para los avisos importantes (por ejemplo, aprobación); el resto queda en el buzón
+- Adaptador de correo, cuando exista un dominio propio
 
 ### Fase 3 — Asistencia con IA
 
@@ -135,7 +144,7 @@ Monolito modular, no microservicios. Sencillo de desarrollar y mantener, pero pr
 | Base de datos | PostgreSQL con Row Level Security |
 | Migraciones | Flyway |
 | Persistencia | Spring Data JPA |
-| Seguridad | Spring Security como resource server OIDC |
+| Seguridad | Spring Security como resource server OIDC, con inicio de sesión de Google |
 | Documentación API | OpenAPI / Swagger |
 | Pruebas | JUnit, Mockito, Testcontainers |
 | Entorno local | Docker Compose |
@@ -216,11 +225,15 @@ Dependabot y OWASP dependency-check en integración continua. Las acciones de Gi
 
 Registro inmutable de quién hizo qué y cuándo, en especial las aprobaciones. Sirve para resolver disputas con clientes y es un requisito en cualquier revisión de compra.
 
+Registra los eventos clave, no toda escritura: cambios de estado, decisiones de aprobación, creación de workspaces, invitaciones, borrados y cada acceso del administrador de la plataforma a un workspace ajeno ([ADR 0006](adr/0006-registro-abierto-administrador-de-plataforma-y-buzon.md)).
+
 ### Datos personales
 
 La plataforma tratará datos personales de terceros: empleados y clientes de las empresas que salen en video. En Colombia aplica la Ley 1581 de 2012.
 
 Se documenta desde ahora en `docs/`: política de tratamiento, autorizaciones de uso de imagen firmadas por cada persona que sale en video, retención de archivos y qué pasa cuando un cliente se va. Conviene verificar el umbral vigente de registro en el RNBD ante la SIC.
+
+La política de privacidad debe decir que el administrador de la plataforma puede acceder al contenido de los workspaces, y que los datos de identidad pasan por Google.
 
 ### Diseño funcional
 

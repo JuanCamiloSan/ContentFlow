@@ -42,7 +42,7 @@ Reglas de ambas:
 - `SET search_path` fijo. Una función `SECURITY DEFINER` sin eso es un agujero clásico.
 - `invitation` y `membership` **no llevan `FORCE`**. Con `FORCE`, el dueño también pasa por RLS y las funciones, que corren con los permisos del dueño, verían cero filas. La protección sigue intacta para la aplicación, que no es dueña de las tablas (decisión 5). Es una excepción documentada a la regla de `FORCE` del ADR 0001.
 - **Nunca se busca a una persona por correo.** La invitación se crea contra un correo sin comprobar si existe cuenta. Al aceptar, la función enlaza con la cuenta autenticada. Esto elimina de raíz un endpoint que permitiría enumerar correos.
-- **El correo manda.** Para aceptar, el token de identidad debe traer `email_verified = true` y el correo, normalizado a minúsculas, debe coincidir con el de la invitación. Sin esta comprobación el token de invitación sería un bearer: quien reciba el correo reenviado entraría con otra cuenta.
+- **El correo manda.** Para aceptar, el token de identidad debe traer `email_verified = true` y el correo, normalizado a minúsculas, debe coincidir con el de la invitación. Sin esta comprobación el token de invitación sería un bearer: quien reciba el enlace reenviado entraría con otra cuenta.
 - El límite de intentos no vive en la función: un hash que no existe no tiene fila donde contar intentos. Con tokens de alta entropía la fuerza bruta es inviable, y el límite por IP y por cuenta es la tarea C13 (rate limit).
 
 ### 3. El workspace activo viaja en `X-Workspace-Id`
@@ -101,7 +101,9 @@ Algunos roles solo ven un cliente concreto de un workspace. Las tablas con `clie
 - El filtro que abre la transacción tiene dos fases (resolver pertenencia, luego fijar workspace) dentro de la misma transacción.
 - La regla "Contexto de tenant" de `CLAUDE.md` y la sección de aislamiento de `docs/modelo-datos.md` se actualizan para reflejar esto.
 - Cambiar de modelo de roles (por ejemplo, un esquema por workspace) exige un ADR nuevo que reemplace a este.
+- El [ADR 0006](0006-registro-abierto-administrador-de-plataforma-y-buzon.md) añade una rama al paso que resuelve la pertenencia (decisión 3): el administrador de la plataforma puede fijar cualquier workspace, y eso deja una fila en `audit_log`. Las políticas RLS no cambian.
+- Una persona autenticada sin `membership` no tiene workspace que fijar. Solo puede crear el suyo o aceptar una invitación, ambas por funciones `SECURITY DEFINER`.
 
 ## Decisiones aún abiertas
 
-- Si la validación de `email_verified` es posible depende del proveedor de identidad, que aún no está elegido. Si el proveedor no la garantiza, la aceptación de invitaciones necesita otro mecanismo de confirmación.
+Ninguna. La duda sobre `email_verified` se resolvió con el [ADR 0004](0004-proveedores-de-identidad-y-correo.md): Google garantiza ese dato.
