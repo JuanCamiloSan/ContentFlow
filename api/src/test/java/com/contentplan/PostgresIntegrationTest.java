@@ -1,9 +1,12 @@
 package com.contentplan;
 
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.postgresql.PostgreSQLContainer;
+
+import com.contentplan.security.TokensDePrueba;
 
 /**
  * Base de las pruebas de integración: arranca la aplicación completa contra un PostgreSQL real.
@@ -12,6 +15,7 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
  * Los {@code DataSource} de la aplicación usan el rol de aplicación, no el superusuario.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@Import(TokensDePrueba.Configuracion.class)
 public abstract class PostgresIntegrationTest {
 
 	static final PostgreSQLContainer POSTGRES = RolesDePrueba.nuevaBase();
@@ -29,6 +33,8 @@ public abstract class PostgresIntegrationTest {
 		registry.add("spring.datasource.password", () -> RolesDePrueba.CLAVE_APLICACION);
 		registry.add("spring.flyway.user", () -> RolesDePrueba.DUENO);
 		registry.add("spring.flyway.password", () -> RolesDePrueba.CLAVE_DUENO);
+		// C2: el audience esperado de los tokens simulados. Nada de Google real (ADR 0004)
+		registry.add("contentplan.seguridad.google-client-id", () -> TokensDePrueba.CLIENT_ID);
 	}
 
 }

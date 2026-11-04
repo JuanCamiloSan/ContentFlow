@@ -13,6 +13,12 @@ spring:
     # La URL se hereda de spring.datasource.
     user: contentplan_owner
     password: ${CONTENTPLAN_OWNER_PASSWORD}
+contentplan:
+  seguridad:
+    # ID de cliente OAuth de Google (ADR 0004): el token debe llevarlo como audience.
+    # No es un secreto, pero sin valor por defecto: si falta, la app no arranca en lugar de
+    # aceptar tokens emitidos para otra aplicación.
+    google-client-id: ${GOOGLE_CLIENT_ID}
 logging:
   structured:
     format:

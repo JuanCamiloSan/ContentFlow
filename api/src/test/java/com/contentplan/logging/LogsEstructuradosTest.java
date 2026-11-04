@@ -10,6 +10,7 @@ import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.web.client.RestClient;
 
 import com.contentplan.PostgresIntegrationTest;
+import com.contentplan.security.TokensDePrueba;
 
 /**
  * Con la aplicación completa: los logs salen como JSON, llevan el identificador de correlación
@@ -23,7 +24,7 @@ class LogsEstructuradosTest extends PostgresIntegrationTest {
 
 	@Test
 	void laLineaDeLogEsJsonConElIdentificadorDeCorrelacion(CapturedOutput salida) {
-		peticion("id-de-prueba-1", "Bearer no-importa", "x=1");
+		peticion("id-de-prueba-1", "Bearer " + TokensDePrueba.valido(), "x=1");
 
 		assertThat(salida.getOut()).contains("\"correlationId\":\"id-de-prueba-1\"")
 				.contains("\"message\":\"Petición atendida method=GET status=200");
@@ -31,22 +32,34 @@ class LogsEstructuradosTest extends PostgresIntegrationTest {
 
 	@Test
 	void nuncaRegistraTokensNiQueryStrings(CapturedOutput salida) {
-		peticion("id-de-prueba-2", "Bearer token-secreto-abc", "api_key=clave-secreta-xyz");
+		String valido = TokensDePrueba.valido();
+		peticion("id-de-prueba-2", "Bearer " + valido, "api_key=clave-secreta-xyz");
 
 		assertThat(salida.getOut()).contains("id-de-prueba-2")
-				.doesNotContain("token-secreto-abc")
+				.doesNotContain(valido)
 				.doesNotContain("clave-secreta-xyz")
 				.doesNotContain("Authorization");
 	}
 
+	@Test
+	void unTokenRechazadoTampocoSeRegistraYLaPeticionLlevaSuCorrelacion(CapturedOutput salida) {
+		// Con token inválido la API responde 401 incluso en rutas públicas: es el camino que más
+		// tentaría a registrar el valor recibido
+		peticion("id-de-prueba-3", "Bearer token-secreto-abc", "x=1");
+
+		assertThat(salida.getOut()).contains("\"correlationId\":\"id-de-prueba-3\"")
+				.contains("status=401")
+				.doesNotContain("token-secreto-abc");
+	}
+
 	private void peticion(String correlationId, String authorization, String query) {
+		// El estado no importa aquí: se inspecciona lo que quedó en el log
 		RestClient.create("http://localhost:" + port)
 				.get()
 				.uri("/health?" + query)
 				.header("X-Correlation-Id", correlationId)
 				.header("Authorization", authorization)
-				.retrieve()
-				.toBodilessEntity();
+				.exchange((req, res) -> res.getStatusCode());
 	}
 
 }

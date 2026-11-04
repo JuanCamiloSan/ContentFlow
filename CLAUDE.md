@@ -68,7 +68,7 @@ cd apps/web && npm run lint && npx tsc --noEmit
 
 ## Cómo trabajar
 
-- Una funcionalidad por vez, con sus pruebas, en un commit con mensaje que explique el porqué
+- Una funcionalidad por vez, con sus pruebas, y un commit con mensaje que explique el porqué, que solo se hace cuando el usuario lo apruebe
 - No generes el proyecto entero de una sola vez
 - No reemplaces archivos ni configuración existente sin revisar las implicaciones
 - Si falta una decisión importante, pregunta antes de asumirla
@@ -83,7 +83,7 @@ Una tarea está lista cuando cumple las cuatro:
 1. Corre en local sin errores
 2. Tiene al menos una prueba que falla si se rompe
 3. La documentación afectada quedó actualizada
-4. Está en un commit con mensaje explicativo
+4. Está lista para un commit con mensaje explicativo. **Nunca hagas el commit sin preguntar antes**: deja los cambios sin confirmar, muestra qué incluiría y espera la aprobación
 
 Nunca marques una tarea como terminada con pruebas fallando o implementación parcial.
 

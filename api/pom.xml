@@ -47,6 +47,12 @@
 			<scope>runtime</scope>
 		</dependency>
 
+		<!-- Resource server OIDC: valida el token de Google (ADR 0004) -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-security-oauth2-resource-server</artifactId>
+		</dependency>
+
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-webmvc-test</artifactId>

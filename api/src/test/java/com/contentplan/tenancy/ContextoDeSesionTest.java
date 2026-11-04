@@ -25,6 +25,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestClient;
 
 import com.contentplan.PostgresIntegrationTest;
+import com.contentplan.security.TokensDePrueba;
 
 /**
  * B3: el contexto de sesión llega a la base al abrir cada transacción y muere con ella. Corre con
@@ -33,7 +34,7 @@ import com.contentplan.PostgresIntegrationTest;
  */
 @TestPropertySource(properties = { "contentplan.contexto-de-prueba.habilitado=true",
 		"spring.datasource.hikari.maximum-pool-size=1" })
-@Import(ContextoDeSesionTest.Sondas.class)
+@Import({ ContextoDeSesionTest.Sondas.class, TokensDePrueba.Configuracion.class })
 class ContextoDeSesionTest extends PostgresIntegrationTest {
 
 	@Autowired
@@ -138,7 +139,8 @@ class ContextoDeSesionTest extends PostgresIntegrationTest {
 	}
 
 	private RestClient cliente() {
-		return RestClient.create("http://localhost:" + port);
+		// C2: la API exige token. Aquí se prueba el contexto de tenant, no la autenticación (SeguridadTest)
+		return TokensDePrueba.clienteAutenticado(port);
 	}
 
 	private UUID crearWorkspace(String nombre) {

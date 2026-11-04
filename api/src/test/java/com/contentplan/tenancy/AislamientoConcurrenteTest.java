@@ -30,6 +30,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestClient;
 
 import com.contentplan.PostgresIntegrationTest;
+import com.contentplan.security.TokensDePrueba;
 
 /**
  * B8: el bug que de verdad filtra datos entre clientes no aparece con una petición a la vez, sino
@@ -41,7 +42,7 @@ import com.contentplan.PostgresIntegrationTest;
  */
 @TestPropertySource(properties = { "contentplan.contexto-de-prueba.habilitado=true",
 		"spring.datasource.hikari.maximum-pool-size=4" })
-@Import(AislamientoConcurrenteTest.Sondas.class)
+@Import({ AislamientoConcurrenteTest.Sondas.class, TokensDePrueba.Configuracion.class })
 class AislamientoConcurrenteTest extends PostgresIntegrationTest {
 
 	private static final int HILOS = 16;
@@ -80,7 +81,8 @@ class AislamientoConcurrenteTest extends PostgresIntegrationTest {
 	void peticionesHttpSimultaneasNoSeContaminanEntreHilosDelServidor() throws Exception {
 		UUID a = crearWorkspace("Agencia A");
 		UUID b = crearWorkspace("Agencia B");
-		RestClient cliente = RestClient.create("http://localhost:" + port);
+		// C2: la API exige token; aquí se prueba el aislamiento, no la autenticación (SeguridadTest)
+		RestClient cliente = TokensDePrueba.clienteAutenticado(port);
 		Queue<String> violaciones = new ConcurrentLinkedQueue<>();
 
 		correrEnParalelo(indice -> {

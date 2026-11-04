@@ -65,8 +65,11 @@ Requiere JDK 21. `JAVA_HOME` debe apuntar a un JDK 21: el wrapper de Maven usa e
 el `java` del `PATH`.
 
 El backend lee la conexión a la base desde variables de entorno (`CONTENTPLAN_APP_PASSWORD`,
-`CONTENTPLAN_OWNER_PASSWORD` y, opcionales, `POSTGRES_HOST`, `POSTGRES_DB` y `POSTGRES_PORT`). Sin las dos contraseñas la
-app no arranca. En PowerShell, para cargarlas desde `infrastructure/.env`:
+`CONTENTPLAN_OWNER_PASSWORD` y, opcionales, `POSTGRES_HOST`, `POSTGRES_DB` y `POSTGRES_PORT`) y el ID de cliente
+de Google (`GOOGLE_CLIENT_ID`), que es el audience que deben llevar los tokens. Sin las dos contraseñas ni el
+ID de cliente la app no arranca. Toda ruta exige un token de Google (`Authorization: Bearer ...`), salvo `/health`
+y la documentación OpenAPI; un token inválido recibe 401 incluso en esas rutas. En PowerShell, para cargarlas
+desde `infrastructure/.env`:
 
 ```powershell
 Get-Content infrastructure\.env | Where-Object { $_ -match '^\s*[A-Z_]+=' } |
@@ -117,7 +120,7 @@ fijadas por SHA de commit; para actualizarlas, cambia el SHA y deja la versión 
 
 `api/Dockerfile` construye la imagen en dos etapas (JDK 21 para compilar, JRE 21 para ejecutar) y
 corre como usuario sin privilegios. No lleva credenciales: la conexión llega por variables de entorno
-(`CONTENTPLAN_APP_PASSWORD`, `CONTENTPLAN_OWNER_PASSWORD`, y opcionales `POSTGRES_DB` y `POSTGRES_PORT`).
+(`CONTENTPLAN_APP_PASSWORD`, `CONTENTPLAN_OWNER_PASSWORD`, `GOOGLE_CLIENT_ID`, y opcionales `POSTGRES_DB` y `POSTGRES_PORT`).
 `POSTGRES_HOST` vale `localhost` por defecto; dentro de un contenedor hay que apuntarlo al servicio
 de la base.
 
@@ -125,7 +128,8 @@ de la base.
 cd api
 docker build -t contentplan-api:local .
 docker run --rm -p 8080:8080 -e POSTGRES_HOST=<host-de-la-base> \
-  -e CONTENTPLAN_APP_PASSWORD=... -e CONTENTPLAN_OWNER_PASSWORD=... contentplan-api:local
+  -e CONTENTPLAN_APP_PASSWORD=... -e CONTENTPLAN_OWNER_PASSWORD=... \
+  -e GOOGLE_CLIENT_ID=... contentplan-api:local
 ```
 
 Las pruebas no corren dentro del build de la imagen: las ejecuta CI con `./mvnw verify`.
