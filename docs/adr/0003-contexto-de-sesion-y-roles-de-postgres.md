@@ -102,6 +102,7 @@ Algunos roles solo ven un cliente concreto de un workspace. Las tablas con `clie
 - La regla "Contexto de tenant" de `CLAUDE.md` y la sección de aislamiento de `docs/modelo-datos.md` se actualizan para reflejar esto.
 - Cambiar de modelo de roles (por ejemplo, un esquema por workspace) exige un ADR nuevo que reemplace a este.
 - El [ADR 0006](0006-registro-abierto-administrador-de-plataforma-y-buzon.md) añade una rama al paso que resuelve la pertenencia (decisión 3): el administrador de la plataforma puede fijar cualquier workspace, y eso deja una fila en `audit_log`. Las políticas RLS no cambian.
+- **Añadido en C3 (2026-11-04):** `app_user` también queda sin `FORCE`, como `membership` e `invitation`, porque las funciones `SECURITY DEFINER` de C4 (crear la persona en su primer ingreso, cuando aún no tiene `id` que fijar), C14 y C15 corren como dueño. Para compensarlo, la aplicación solo tiene `SELECT` sobre `app_user` y `membership`: se les retiró el DML que V3 concede por defecto. Así una ruta con un bug no puede subirse `max_workspaces` ni la marca de administrador, ni crearse una `membership`. `PoliticasRlsTest` lleva la lista de excepciones al `FORCE`.
 - Una persona autenticada sin `membership` no tiene workspace que fijar. Solo puede crear el suyo o aceptar una invitación, ambas por funciones `SECURITY DEFINER`.
 
 ## Decisiones aún abiertas

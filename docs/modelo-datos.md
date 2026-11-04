@@ -62,8 +62,8 @@ La base guarda la ficha del archivo: nombre, tamaño, dónde está, su huella di
 | Tabla | Guarda | Nota de diseño |
 | --- | --- | --- |
 | `workspace` | El espacio de cada agencia | Única tabla sin `workspace_id`: ella es la frontera |
-| `app_user` | Personas con cuenta de Google | Vive fuera del workspace: una persona puede pertenecer a varios. Guarda `max_workspaces` (1 por defecto) y la marca de administrador de la plataforma, que se asigna a mano con SQL (ADR 0006) |
-| `membership` | Qué persona pertenece a qué workspace y con qué rol | El rol es uno de cuatro: propietario, editor, aprobador o colaborador. También limita a un cliente concreto cuando el rol lo requiere. El administrador de la plataforma no tiene fila aquí |
+| `app_user` | Personas con cuenta de Google | Vive fuera del workspace: una persona puede pertenecer a varios. Guarda el `sub` de Google (la identidad estable, ADR 0004), el correo en minúsculas, `max_workspaces` (1 por defecto) y la marca de administrador de la plataforma, que se asigna a mano con SQL (ADR 0006). La aplicación solo la lee y solo ve su propia fila; se escribe por funciones `SECURITY DEFINER` |
+| `membership` | Qué persona pertenece a qué workspace y con qué rol | El rol es uno de cuatro: propietario, editor, aprobador o colaborador. También limita a un cliente concreto cuando el rol lo requiere: los de agencia no llevan `client_id` y los de cliente sí, y la base lo exige. Una pertenencia por persona y workspace. `client_id` no tiene llave foránea hasta que D1 cree `client`. El administrador de la plataforma no tiene fila aquí. La aplicación solo la lee; se escribe por funciones `SECURITY DEFINER` |
 | `invitation` | Invitaciones pendientes | Hash del token (un solo uso, con expiración), correo esperado, rol y cliente. Se entrega como un enlace que copia el propietario; la aplicación no envía correo. Excepción al aislamiento: se consulta por función `SECURITY DEFINER` (ADR 0003) |
 | `notification` | Avisos del buzón de la aplicación | Canal (hoy solo la aplicación), marca de importante y fecha de lectura. WhatsApp se añade en la Fase 2, solo para los importantes |
 | `client` | Empresa cliente | Relación comercial, más propiedad y retención pactadas |
@@ -207,7 +207,11 @@ Las políticas llaman a `current_workspace()`, que lanza excepción si no hay wo
 
 El workspace activo viaja en el encabezado `X-Workspace-Id`, no en el token: un claim obligaría a volver a autenticarse para cambiar de workspace. El encabezado se valida contra `membership` antes de fijar la variable. Si la persona pertenece a uno solo y no lo manda, se usa ese; si pertenece a varios, se rechaza.
 
-`invitation` es la excepción: el invitado aún no tiene `membership`. Se accede por funciones `SECURITY DEFINER` que reciben el hash del token y devuelven solo esa invitación. `invitation` y `membership` no llevan `FORCE`, porque esas funciones corren como dueño. Detalles en el ADR 0003.
+`invitation` es la excepción: el invitado aún no tiene `membership`. Se accede por funciones `SECURITY DEFINER` que reciben el hash del token y devuelven solo esa invitación. `invitation`, `membership` y `app_user` no llevan `FORCE`, porque esas funciones corren como dueño. La protección sigue intacta para la aplicación: no es dueña de las tablas y además no tiene permisos de escritura sobre `app_user` ni `membership`, así que ninguna ruta de la API puede darse privilegios a sí misma. `PoliticasRlsTest` mantiene la lista de excepciones y falla si una tabla nueva se salta la regla sin estar en ella. Detalles en el ADR 0003.
+
+La segunda frontera por cliente vive en `puede_ver_cliente(client_id)`, que las tablas con `client_id` llaman desde su política. Los roles de agencia ven todos los clientes del workspace, los de cliente solo el suyo, y el administrador de la plataforma, que no tiene `membership`, se reconoce ahí y no en cada política.
+
+Límite conocido: la política de `membership` deja ver el equipo completo del workspace activo, también a los roles de cliente. Solo exponen identificadores, roles y clientes, no correos (esos viven en `app_user`). Si C5 decide que un rol de cliente no debe listar al equipo de la agencia, se restringe en la política.
 
 ### El punto único de entrada
 
