@@ -1,10 +1,10 @@
-# ContentFlow — Prompt de proyecto (v2)
+# ContentPlan — Prompt de proyecto (v2)
 
 Actualizado: 2026-11-03
 
 ## Contexto y objetivo
 
-ContentFlow es una aplicación web para gestionar y automatizar la creación de contenido audiovisual para empresas que publican en Instagram, TikTok y YouTube.
+ContentPlan es una aplicación web para gestionar y automatizar la creación de contenido audiovisual para empresas que publican en Instagram, TikTok y YouTube.
 
 Primero debe servir para administrar mi propia operación. Después debe poder convertirse en un producto SaaS vendible a otros creadores y agencias pequeñas.
 

@@ -1,4 +1,4 @@
-# ContentFlow
+# ContentPlan
 
 Plataforma de gestión de contenido audiovisual para empresas. Monolito modular multiempresa.
 
@@ -36,16 +36,16 @@ Requiere Docker con Compose.
 
 ```bash
 cp infrastructure/.env.example infrastructure/.env
-# edita infrastructure/.env y define POSTGRES_PASSWORD, CONTENTFLOW_OWNER_PASSWORD
-# y CONTENTFLOW_APP_PASSWORD (tres contraseñas distintas)
+# edita infrastructure/.env y define POSTGRES_PASSWORD, CONTENTPLAN_OWNER_PASSWORD
+# y CONTENTPLAN_APP_PASSWORD (tres contraseñas distintas)
 docker compose -f infrastructure/docker-compose.yml up -d
 ```
 
 Al crear el volumen, `infrastructure/postgres/init-roles.sh` crea dos roles sin superusuario ni
-`BYPASSRLS`: `contentflow_owner` (dueño del esquema, para Flyway) y `contentflow_app` (solo DML,
+`BYPASSRLS`: `contentplan_owner` (dueño del esquema, para Flyway) y `contentplan_app` (solo DML,
 para la API). Ver [ADR 0003](docs/adr/0003-contexto-de-sesion-y-roles-de-postgres.md). El script solo
 corre con un volumen nuevo: si ya tenías uno, recréalo con `down -v` (borra los datos locales).
-La API se conecta con `contentflow_app` y Flyway con `contentflow_owner` (B10); `POSTGRES_USER` es solo
+La API se conecta con `contentplan_app` y Flyway con `contentplan_owner` (B10); `POSTGRES_USER` es solo
 administración y la aplicación no lo usa.
 
 Para validar que funciona:
@@ -53,7 +53,7 @@ Para validar que funciona:
 ```bash
 docker compose -f infrastructure/docker-compose.yml ps    # postgres en estado "healthy"
 docker compose -f infrastructure/docker-compose.yml exec postgres \
-  psql -U contentflow -d contentflow -c "select 1"
+  psql -U contentplan -d contentplan -c "select 1"
 ```
 
 Los datos persisten en el volumen `postgres_data`. El puerto solo se publica en `127.0.0.1`.
@@ -64,8 +64,8 @@ Para borrar todo, incluidos los datos: `docker compose -f infrastructure/docker-
 Requiere JDK 21. `JAVA_HOME` debe apuntar a un JDK 21: el wrapper de Maven usa esa variable, no
 el `java` del `PATH`.
 
-El backend lee la conexión a la base desde variables de entorno (`CONTENTFLOW_APP_PASSWORD`,
-`CONTENTFLOW_OWNER_PASSWORD` y, opcionales, `POSTGRES_HOST`, `POSTGRES_DB` y `POSTGRES_PORT`). Sin las dos contraseñas la
+El backend lee la conexión a la base desde variables de entorno (`CONTENTPLAN_APP_PASSWORD`,
+`CONTENTPLAN_OWNER_PASSWORD` y, opcionales, `POSTGRES_HOST`, `POSTGRES_DB` y `POSTGRES_PORT`). Sin las dos contraseñas la
 app no arranca. En PowerShell, para cargarlas desde `infrastructure/.env`:
 
 ```powershell
@@ -91,7 +91,7 @@ historial:
 
 ```bash
 docker compose -f infrastructure/docker-compose.yml exec postgres \
-  psql -U contentflow -d contentflow -c "select * from flyway_schema_history"
+  psql -U contentplan -d contentplan -c "select * from flyway_schema_history"
 ```
 
 #### Contexto de sesión
@@ -103,7 +103,7 @@ Sin contexto, toda consulta a una tabla con RLS falla con "No hay contexto de wo
 Hasta C4 no hay autenticación, así que el contexto sale de las cabeceras `X-Test-User-Id` y
 `X-Workspace-Id`. Ese filtro **está apagado por defecto**: cualquiera que pueda mandar una cabecera
 elige su workspace. Para probar a mano en local, arranca con
-`CONTENTFLOW_CONTEXTO_DE_PRUEBA_HABILITADO=true`. Nunca va en `application.yml` ni en un entorno
+`CONTENTPLAN_CONTEXTO_DE_PRUEBA_HABILITADO=true`. Nunca va en `application.yml` ni en un entorno
 compartido. C4 lo borra.
 
 ## Integración continua
@@ -117,15 +117,15 @@ fijadas por SHA de commit; para actualizarlas, cambia el SHA y deja la versión 
 
 `api/Dockerfile` construye la imagen en dos etapas (JDK 21 para compilar, JRE 21 para ejecutar) y
 corre como usuario sin privilegios. No lleva credenciales: la conexión llega por variables de entorno
-(`CONTENTFLOW_APP_PASSWORD`, `CONTENTFLOW_OWNER_PASSWORD`, y opcionales `POSTGRES_DB` y `POSTGRES_PORT`).
+(`CONTENTPLAN_APP_PASSWORD`, `CONTENTPLAN_OWNER_PASSWORD`, y opcionales `POSTGRES_DB` y `POSTGRES_PORT`).
 `POSTGRES_HOST` vale `localhost` por defecto; dentro de un contenedor hay que apuntarlo al servicio
 de la base.
 
 ```bash
 cd api
-docker build -t contentflow-api:local .
+docker build -t contentplan-api:local .
 docker run --rm -p 8080:8080 -e POSTGRES_HOST=<host-de-la-base> \
-  -e CONTENTFLOW_APP_PASSWORD=... -e CONTENTFLOW_OWNER_PASSWORD=... contentflow-api:local
+  -e CONTENTPLAN_APP_PASSWORD=... -e CONTENTPLAN_OWNER_PASSWORD=... contentplan-api:local
 ```
 
 Las pruebas no corren dentro del build de la imagen: las ejecuta CI con `./mvnw verify`.

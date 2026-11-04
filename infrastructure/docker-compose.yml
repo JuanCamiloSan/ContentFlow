@@ -3,12 +3,12 @@ services:
     image: postgres:16.4
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-contentflow}
+      POSTGRES_DB: ${POSTGRES_DB:-contentplan}
       POSTGRES_USER: ${POSTGRES_USER:?Define POSTGRES_USER en infrastructure/.env}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD en infrastructure/.env}
       # Contraseñas de los roles que crea postgres/init-roles.sh (ADR 0003)
-      CONTENTFLOW_OWNER_PASSWORD: ${CONTENTFLOW_OWNER_PASSWORD:?Define CONTENTFLOW_OWNER_PASSWORD en infrastructure/.env}
-      CONTENTFLOW_APP_PASSWORD: ${CONTENTFLOW_APP_PASSWORD:?Define CONTENTFLOW_APP_PASSWORD en infrastructure/.env}
+      CONTENTPLAN_OWNER_PASSWORD: ${CONTENTPLAN_OWNER_PASSWORD:?Define CONTENTPLAN_OWNER_PASSWORD en infrastructure/.env}
+      CONTENTPLAN_APP_PASSWORD: ${CONTENTPLAN_APP_PASSWORD:?Define CONTENTPLAN_APP_PASSWORD en infrastructure/.env}
     ports:
       # Solo accesible desde esta máquina
       - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"

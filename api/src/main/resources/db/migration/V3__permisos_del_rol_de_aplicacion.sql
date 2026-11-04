@@ -4,8 +4,8 @@
 -- desactivar RLS.
 
 -- Explícito en lugar de ALL TABLES: así el rol de aplicación no ve flyway_schema_history
-GRANT SELECT, INSERT, UPDATE, DELETE ON workspace TO contentflow_app;
+GRANT SELECT, INSERT, UPDATE, DELETE ON workspace TO contentplan_app;
 
 -- Toda tabla futura creada por el dueño queda accesible sin trabajo manual
 ALTER DEFAULT PRIVILEGES IN SCHEMA public
-    GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO contentflow_app;
+    GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO contentplan_app;

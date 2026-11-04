@@ -73,5 +73,5 @@ El prototipo que se usó para validar el flujo incluye ideas que **no** quedaron
 - Un estado de "Revisión interna" aparte de "Aprobación cliente". Pasaría la máquina de 8 a 9 estados y cambiaría E3 y E4.
 - Calendario de publicación con fecha propuesta por la agencia y confirmada por el cliente. Toca el módulo `scheduling`, que hoy es de la Fase 2.
 - Aprobación delegada por cliente: un campo nuevo en `client` que decide si aprueba el cliente o la agencia.
-- Plan de servicio por cliente y planes de ContentFlow. Es facturación, aplazada a la Fase 4.
+- Plan de servicio por cliente y planes de ContentPlan. Es facturación, aplazada a la Fase 4.
 - Publicar en el momento, reservado al Propietario.

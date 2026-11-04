@@ -3,10 +3,11 @@
 - **Estado:** aceptada
 - **Fecha:** 2026-10-26
 - **Origen:** tabla "Registro de decisiones" de `docs/modelo-datos.md` y `docs/prompt-proyecto.md`
+- **Nota (2026-11-03):** el producto se llamó ContentFlow hasta esta fecha y desde entonces se llama ContentPlan. Los nombres técnicos (paquete Java, roles de PostgreSQL, variables de entorno, imagen Docker) se renombraron con él.
 
 ## Contexto
 
-ContentFlow debe servir primero a una operación real (una agencia con clientes propios) y después poder venderse como SaaS multiempresa. La disponibilidad es de 5 a 8 horas semanales, así que las decisiones favorecen la simplicidad operativa y evitan reconstrucciones posteriores.
+ContentPlan debe servir primero a una operación real (una agencia con clientes propios) y después poder venderse como SaaS multiempresa. La disponibilidad es de 5 a 8 horas semanales, así que las decisiones favorecen la simplicidad operativa y evitan reconstrucciones posteriores.
 
 Este ADR recoge las decisiones fundacionales ya tomadas. Cada una se puede reemplazar con un ADR posterior que la referencie; mientras tanto, este documento es la fuente de verdad sobre el porqué.
 

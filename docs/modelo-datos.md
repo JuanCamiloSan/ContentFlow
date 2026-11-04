@@ -1,8 +1,8 @@
-# ContentFlow — Modelo de datos y seguridad
+# ContentPlan — Modelo de datos y seguridad
 
 Actualizado: 2026-11-03
 
-Define cómo ContentFlow guarda la información y cómo impide que los datos de un cliente se mezclen con los de otro.
+Define cómo ContentPlan guarda la información y cómo impide que los datos de un cliente se mezclen con los de otro.
 
 ## Las cinco ideas del modelo
 

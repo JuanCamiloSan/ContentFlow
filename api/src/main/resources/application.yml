@@ -1,18 +1,18 @@
 spring:
   application:
-    name: contentflow-api
+    name: contentplan-api
   datasource:
     # Rol de aplicación (ADR 0003): solo DML, sin ser dueño de nada ni saltarse RLS.
     # Sin valor por defecto para la contraseña: si falta, la app no arranca.
-    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:contentflow}
-    username: contentflow_app
-    password: ${CONTENTFLOW_APP_PASSWORD}
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:contentplan}
+    username: contentplan_app
+    password: ${CONTENTPLAN_APP_PASSWORD}
   flyway:
     locations: classpath:db/migration
     # Flyway abre su propia conexión como dueño del esquema; la API nunca usa este rol.
     # La URL se hereda de spring.datasource.
-    user: contentflow_owner
-    password: ${CONTENTFLOW_OWNER_PASSWORD}
+    user: contentplan_owner
+    password: ${CONTENTPLAN_OWNER_PASSWORD}
 logging:
   structured:
     format:

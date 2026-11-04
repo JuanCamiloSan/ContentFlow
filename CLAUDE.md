@@ -1,4 +1,4 @@
-# ContentFlow
+# ContentPlan
 
 Plataforma de gestión de contenido audiovisual para empresas. Monolito modular multiempresa.
 

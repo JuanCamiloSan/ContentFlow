@@ -39,4 +39,4 @@ jobs:
 
       # Falla si el Dockerfile se rompe. Solo construye, no publica la imagen.
       - name: Construir imagen Docker
-        run: docker build -t contentflow-api:ci .
+        run: docker build -t contentplan-api:ci .
