@@ -220,6 +220,7 @@ class AislamientoConcurrenteTest extends PostgresIntegrationTest {
 				this.tx = new TransactionTemplate(transacciones);
 			}
 
+			@CualquierMiembro
 			@GetMapping("/sonda/workspaces")
 			List<String> workspaces() {
 				return tx.execute(estado -> jdbc.queryForList("SELECT name FROM workspace", String.class));

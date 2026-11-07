@@ -49,9 +49,19 @@ public final class IdentidadDePrueba {
 		return id;
 	}
 
-	/** Pertenencia de agencia (propietario o editor): sin cliente. */
+	/** Pertenencia de agencia (propietario o editor): sin cliente. Un rol de cliente recibe uno al azar. */
 	public static void unirse(UUID persona, UUID workspace, String rol) {
-		comoDueno("INSERT INTO membership (workspace_id, user_id, role) VALUES (?, ?, ?)", workspace, persona, rol);
+		boolean deCliente = rol.equals("aprobador") || rol.equals("colaborador");
+		// client no tiene tabla hasta D1: el CHECK de membership solo exige que el rol de cliente lleve uno
+		comoDueno("INSERT INTO membership (workspace_id, user_id, role, client_id) VALUES (?, ?, ?, ?)", workspace,
+				persona, rol, deCliente ? UUID.randomUUID() : null);
+	}
+
+	/** Cambia el rol y ajusta el cliente en la misma sentencia, porque el CHECK de membership los liga. */
+	public static void cambiarRol(UUID persona, UUID workspace, String rol) {
+		boolean deCliente = rol.equals("aprobador") || rol.equals("colaborador");
+		comoDueno("UPDATE membership SET role = ?, client_id = ? WHERE user_id = ? AND workspace_id = ?", rol,
+				deCliente ? UUID.randomUUID() : null, persona, workspace);
 	}
 
 	public static void hacerAdministradorDeLaPlataforma(UUID persona) {

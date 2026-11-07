@@ -114,7 +114,7 @@ El backend solo permite las transiciones del diagrama. No se puede pasar de agen
 | En aprobación → Aprobado, o de vuelta a En edición | Solo por una decisión en `review`: la del Aprobador, o la del Propietario en nombre del cliente. El Editor no puede |
 | Aprobado → Publicado → Reportado | Propietario y Editor |
 
-El Colaborador no mueve estados. Esta regla vive en el endpoint de transición, junto con la tabla de transiciones permitidas (E4 y E5 del backlog).
+El Colaborador no mueve estados. Esta regla vive en el endpoint de transición, junto con la tabla de transiciones permitidas (E4 y E5 del backlog). El mecanismo de roles existe desde C5: cada endpoint declara con `@RequiereRol` o `@CualquierMiembro` quién puede llamarlo, y el que no declara nada queda cerrado para todos.
 
 ### Dónde entra cada plan de servicio
 

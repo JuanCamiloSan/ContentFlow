@@ -279,6 +279,7 @@ class ContextoDeTokenTest extends PostgresIntegrationTest {
 			}
 
 			/** Lo que la base ve como contexto dentro de la transacción de la petición. */
+			@CualquierMiembro
 			@GetMapping(CONTEXTO)
 			Map<String, String> contexto() {
 				return tx.execute(estado -> jdbc.queryForObject(

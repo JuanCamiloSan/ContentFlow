@@ -61,6 +61,7 @@ El frontend tiene dos zonas de rutas, `/agencia` y `/cliente`, sobre el mismo ba
 ## Consecuencias
 
 - `membership` guarda uno de cuatro roles. C5 los implementa con sus pruebas y C10 verifica que el Editor no aprueba y que el Colaborador solo comenta.
+- **Añadido en C5 (2026-11-06):** el rol de la petición es el de la `membership` en el workspace activo (no el más alto que tenga la persona ni uno que mande el cliente), y se lee de la base en cada petición, sin caché. Cada endpoint declara qué roles lo pueden llamar con `@RequiereRol` o `@CualquierMiembro`; el que no declara nada responde 403 a todos, también al propietario. Se eligió cerrar por defecto porque un olvido falla al probarlo y no en producción, y la regla "quien edita no aprueba" depende de que ningún endpoint quede abierto por descuido. Esto decide qué acciones puede hacer cada rol; qué filas ve lo sigue imponiendo RLS. Un endpoint `@SinWorkspace` (crear workspace, aceptar invitación) pasa sin importar el rol.
 - `review` gana la columna `decided_on_behalf`.
 - Nueva tarea E15 para `comment`. E5 valida además qué rol dispara cada transición.
 - G1 construye las dos zonas de rutas.

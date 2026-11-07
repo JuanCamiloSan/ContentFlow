@@ -1,10 +1,12 @@
 package com.contentplan.tenancy;
 
-import java.util.HashSet;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowCallbackHandler;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -21,7 +23,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  * <li>Lectura de {@code membership} con solo {@code app.user_id} fijado. Es RLS legítimo: la política
  * deja ver las filas propias antes de que haya workspace activo.</li>
  * </ol>
- * El valor de {@code app.workspace_id} solo sale de aquí si la persona pertenece a ese workspace; las
+ * El rol sale de la misma lectura de {@code membership} (C5). El valor de {@code app.workspace_id} solo sale de aquí si la persona pertenece a ese workspace; las
  * transacciones las abre {@link TransaccionesConContexto}, el único punto que escribe en la base.
  */
 @Component
@@ -54,10 +56,15 @@ public class ResolutorDeContexto {
 					UUID.class, googleSub, correo));
 
 			ContextoDeSesionActual.fijar(new ContextoDeSesion(usuario, null));
-			Set<UUID> pertenencias = new HashSet<>(transaccion.execute(
-					estado -> jdbc.queryForList("SELECT workspace_id FROM membership", UUID.class)));
+			Map<UUID, Rol> pertenencias = new HashMap<>();
+			transaccion.executeWithoutResult(estado -> jdbc.query("SELECT workspace_id, role FROM membership",
+					(RowCallbackHandler) rs -> pertenencias.put(rs.getObject(1, UUID.class),
+							Rol.desdeBase(rs.getString(2)))));
 
-			return new ContextoDeSesion(usuario, elegir(solicitado, pertenencias));
+			UUID workspace = elegir(solicitado, pertenencias.keySet());
+			// El rol es el de la membership en ESE workspace: la misma persona puede ser propietaria
+			// en uno y colaboradora en otro
+			return new ContextoDeSesion(usuario, workspace, workspace == null ? null : pertenencias.get(workspace));
 		}
 		finally {
 			ContextoDeSesionActual.limpiar();
