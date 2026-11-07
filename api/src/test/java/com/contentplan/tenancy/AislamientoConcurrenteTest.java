@@ -29,6 +29,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestClient;
 
+import com.contentplan.IdentidadDePrueba;
 import com.contentplan.PostgresIntegrationTest;
 import com.contentplan.security.TokensDePrueba;
 
@@ -40,8 +41,7 @@ import com.contentplan.security.TokensDePrueba;
  * Si el contexto sobreviviera a una transacción, una "sin contexto" que caiga en una conexión
  * recién usada por A o B tendría éxito en lugar de fallar, y alguien vería filas ajenas.
  */
-@TestPropertySource(properties = { "contentplan.contexto-de-prueba.habilitado=true",
-		"spring.datasource.hikari.maximum-pool-size=4" })
+@TestPropertySource(properties = "spring.datasource.hikari.maximum-pool-size=4")
 @Import({ AislamientoConcurrenteTest.Sondas.class, TokensDePrueba.Configuracion.class })
 class AislamientoConcurrenteTest extends PostgresIntegrationTest {
 
@@ -81,8 +81,12 @@ class AislamientoConcurrenteTest extends PostgresIntegrationTest {
 	void peticionesHttpSimultaneasNoSeContaminanEntreHilosDelServidor() throws Exception {
 		UUID a = crearWorkspace("Agencia A");
 		UUID b = crearWorkspace("Agencia B");
-		// C2: la API exige token; aquí se prueba el aislamiento, no la autenticación (SeguridadTest)
-		RestClient cliente = TokensDePrueba.clienteAutenticado(port);
+		// Una persona de las dos agencias: solo el encabezado decide cuál ve en cada petición
+		String sub = "persona-" + UUID.randomUUID();
+		UUID persona = IdentidadDePrueba.persona(sub);
+		IdentidadDePrueba.unirse(persona, a, "propietario");
+		IdentidadDePrueba.unirse(persona, b, "propietario");
+		RestClient cliente = TokensDePrueba.clienteAutenticado(port, sub);
 		Queue<String> violaciones = new ConcurrentLinkedQueue<>();
 
 		correrEnParalelo(indice -> {
@@ -147,8 +151,9 @@ class AislamientoConcurrenteTest extends PostgresIntegrationTest {
 	private static void verificarHttpSinCabeceras(RestClient cliente, Queue<String> violaciones) {
 		HttpStatus estado = (HttpStatus) cliente.get().uri("/sonda/workspaces")
 				.exchange((req, res) -> res.getStatusCode());
-		if (estado != HttpStatus.INTERNAL_SERVER_ERROR) {
-			violaciones.add("Por HTTP sin cabeceras se esperaba 500 y llegó " + estado);
+		// Con dos workspaces y sin encabezado, C4 se niega a elegir uno por la persona
+		if (estado != HttpStatus.BAD_REQUEST) {
+			violaciones.add("Por HTTP sin cabeceras se esperaba 400 y llegó " + estado);
 		}
 	}
 

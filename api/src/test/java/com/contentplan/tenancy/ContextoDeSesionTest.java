@@ -24,6 +24,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestClient;
 
+import com.contentplan.IdentidadDePrueba;
 import com.contentplan.PostgresIntegrationTest;
 import com.contentplan.security.TokensDePrueba;
 
@@ -32,8 +33,7 @@ import com.contentplan.security.TokensDePrueba;
  * el rol de aplicación y con un pool de una sola conexión, de modo que toda transacción reutiliza la
  * misma conexión física: si el contexto sobreviviera, se vería.
  */
-@TestPropertySource(properties = { "contentplan.contexto-de-prueba.habilitado=true",
-		"spring.datasource.hikari.maximum-pool-size=1" })
+@TestPropertySource(properties = "spring.datasource.hikari.maximum-pool-size=1")
 @Import({ ContextoDeSesionTest.Sondas.class, TokensDePrueba.Configuracion.class })
 class ContextoDeSesionTest extends PostgresIntegrationTest {
 
@@ -106,41 +106,51 @@ class ContextoDeSesionTest extends PostgresIntegrationTest {
 	}
 
 	@Test
-	void porHttpLasCabecerasFijanElWorkspaceYCadaUnoSoloVeElSuyo() {
+	void porHttpElEncabezadoFijaElWorkspaceYCadaUnoSoloVeElSuyo() {
 		UUID a = crearWorkspace("Agencia A");
 		UUID b = crearWorkspace("Agencia B");
+		// Una persona de las dos agencias: el encabezado decide cuál ve, y la base solo muestra esa
+		String sub = nuevoSub();
+		UUID persona = IdentidadDePrueba.persona(sub);
+		IdentidadDePrueba.unirse(persona, a, "propietario");
+		IdentidadDePrueba.unirse(persona, b, "propietario");
 
-		assertThat(nombresVistosPorHttp(a)).containsExactly("Agencia A");
-		assertThat(nombresVistosPorHttp(b)).containsExactly("Agencia B");
+		assertThat(nombresVistosPorHttp(sub, a)).containsExactly("Agencia A");
+		assertThat(nombresVistosPorHttp(sub, b)).containsExactly("Agencia B");
 	}
 
 	@Test
-	void porHttpSinCabecerasLaConsultaFalla() {
-		HttpStatus estado = (HttpStatus) cliente().get().uri("/sonda/workspaces")
+	void porHttpUnaPersonaSinWorkspaceNoLlegaALaConsulta() {
+		HttpStatus estado = (HttpStatus) cliente(nuevoSub()).get().uri("/sonda/workspaces")
 				.exchange((req, res) -> res.getStatusCode());
 
-		assertThat(estado).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+		// 403 del filtro de C4, antes de que la consulta falle por falta de contexto
+		assertThat(estado).isEqualTo(HttpStatus.FORBIDDEN);
 	}
 
 	@Test
 	void porHttpUnaCabeceraQueNoEsUuidSeRechazaConElError400() {
-		HttpStatus estado = (HttpStatus) cliente().get().uri("/sonda/workspaces")
+		HttpStatus estado = (HttpStatus) cliente(nuevoSub()).get().uri("/sonda/workspaces")
 				.header("X-Workspace-Id", "no-es-un-uuid' OR '1'='1")
 				.exchange((req, res) -> res.getStatusCode());
 
 		assertThat(estado).isEqualTo(HttpStatus.BAD_REQUEST);
 	}
 
-	private List<String> nombresVistosPorHttp(UUID workspace) {
-		return cliente().get().uri("/sonda/workspaces")
+	private static String nuevoSub() {
+		return "persona-" + UUID.randomUUID();
+	}
+
+	private List<String> nombresVistosPorHttp(String sub, UUID workspace) {
+		return cliente(sub).get().uri("/sonda/workspaces")
 				.header("X-Workspace-Id", workspace.toString())
 				.retrieve().body(new ParameterizedTypeReference<>() {
 				});
 	}
 
-	private RestClient cliente() {
-		// C2: la API exige token. Aquí se prueba el contexto de tenant, no la autenticación (SeguridadTest)
-		return TokensDePrueba.clienteAutenticado(port);
+	private RestClient cliente(String sub) {
+		// Aquí se prueba que el contexto llega a la base; la autenticación es de SeguridadTest
+		return TokensDePrueba.clienteAutenticado(port, sub);
 	}
 
 	private UUID crearWorkspace(String nombre) {

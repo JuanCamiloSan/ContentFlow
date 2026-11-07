@@ -227,6 +227,8 @@ El tercer argumento `true` equivale a `SET LOCAL`: el valor muere al terminar la
 
 ### Sin workspace y administrador de la plataforma
 
+El `sub` del token se traduce al `uuid` de `app_user` con la función `SECURITY DEFINER` `resolver_usuario(sub, email)`, que registra a la persona la primera vez y solo devuelve su `uuid` (C4). Hasta E13, el administrador de la plataforma no puede fijar un workspace ajeno: la rama de abajo se activa cuando exista `audit_log`.
+
 El registro es abierto ([ADR 0006](adr/0006-registro-abierto-administrador-de-plataforma-y-buzon.md)), así que existe una persona autenticada sin `membership`. No tiene workspace que fijar: solo puede crear el suyo o aceptar una invitación, ambas por funciones `SECURITY DEFINER`. Crear el workspace y la `membership` de propietario es una sola operación atómica que verifica `max_workspaces` bloqueando la fila de `app_user`, para que dos peticiones simultáneas no superen el límite.
 
 El administrador de la plataforma es una marca en `app_user`, no un claim del token. Para trabajar dentro de un workspace ajeno, el paso que valida `X-Workspace-Id` contra `membership` lo acepta para cualquier workspace y escribe una fila en `audit_log`. Después fija `app.workspace_id` como siempre y las políticas normales aplican igual. Para listar workspaces y cambiar límites usa funciones `SECURITY DEFINER` acotadas. Nunca hay un rol con `BYPASSRLS`.

@@ -1,5 +1,6 @@
 package com.contentplan.security;
 
+import java.util.Arrays;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -16,11 +17,18 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtTimestampValidator;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
+import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
+import org.springframework.security.web.util.matcher.RequestMatcher;
+import org.springframework.security.web.util.matcher.RequestMatchers;
+
+import com.contentplan.tenancy.ResolutorDeContexto;
 
 /**
  * La API es un resource server: toda petición lleva el token de identidad de Google y el backend lo
- * valida solo (ADR 0004). Este paso autentica; de dónde sale el contexto de tenant lo decide C4.
+ * valida solo (ADR 0004). Tras validarlo, {@link ContextoDeTenantFilter} saca del token la persona y
+ * resuelve su workspace (C4).
  */
 @Configuration(proxyBeanMethods = false)
 class SeguridadConfig {
@@ -32,19 +40,27 @@ class SeguridadConfig {
 	private static final List<String> EMISORES_DE_GOOGLE = List.of("https://accounts.google.com",
 			"accounts.google.com");
 
+	/** Las únicas rutas que no piden token. Lo que no se nombra aquí queda cerrado. */
+	static final String[] RUTAS_PUBLICAS = { "/health", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html" };
+
 	@Bean
-	SecurityFilterChain cadenaDeSeguridad(HttpSecurity http) throws Exception {
+	SecurityFilterChain cadenaDeSeguridad(HttpSecurity http, ResolutorDeContexto resolutor) throws Exception {
+		RequestMatcher rutasPublicas = RequestMatchers.anyOf(Arrays.stream(RUTAS_PUBLICAS)
+				.map(ruta -> (RequestMatcher) PathPatternRequestMatcher.withDefaults().matcher(ruta))
+				.toArray(RequestMatcher[]::new));
 		http
 				// API sin sesión ni cookies: el token viaja en la cabecera Authorization, no hay nada
 				// que un sitio ajeno pueda hacer valer por el navegador
 				.csrf(csrf -> csrf.disable())
 				.sessionManagement(sesion -> sesion.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 				.authorizeHttpRequests(rutas -> rutas
-						.requestMatchers("/health", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html")
-						.permitAll()
+						.requestMatchers(RUTAS_PUBLICAS).permitAll()
 						// Lo que no se nombra aquí queda cerrado
 						.anyRequest().authenticated())
-				.oauth2ResourceServer(servidor -> servidor.jwt(Customizer.withDefaults()));
+				.oauth2ResourceServer(servidor -> servidor.jwt(Customizer.withDefaults()))
+				// C4: del token al contexto de tenant, justo después de validarlo (ver el filtro)
+				.addFilterAfter(new ContextoDeTenantFilter(resolutor, rutasPublicas),
+						BearerTokenAuthenticationFilter.class);
 		return http.build();
 	}
 

@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestClient;
 
 import com.contentplan.PostgresIntegrationTest;
+import com.contentplan.tenancy.SinWorkspace;
 import com.nimbusds.jwt.JWTClaimsSet;
 
 /**
@@ -144,6 +145,8 @@ class SeguridadTest extends PostgresIntegrationTest {
 		@RestController
 		static class SondaController {
 
+			// Esta prueba es de autenticación, no de tenant: la persona del token no tiene workspace
+			@SinWorkspace
 			@GetMapping("/sonda/yo")
 			String yo(@AuthenticationPrincipal Jwt jwt) {
 				return jwt.getSubject();

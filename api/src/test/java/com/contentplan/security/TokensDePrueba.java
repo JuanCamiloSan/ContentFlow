@@ -52,7 +52,13 @@ public final class TokensDePrueba {
 	public static JWTClaimsSet.Builder claims(String subject) {
 		Instant ahora = Instant.now();
 		return new JWTClaimsSet.Builder().issuer(EMISOR).audience(CLIENT_ID).subject(subject)
+				.claim("email", correoDe(subject)).claim("email_verified", true)
 				.issueTime(Date.from(ahora)).expirationTime(Date.from(ahora.plusSeconds(3600)));
+	}
+
+	/** El correo que lleva el token válido de ese sub, ya en minúsculas como lo guarda {@code app_user}. */
+	public static String correoDe(String subject) {
+		return subject.toLowerCase() + "@example.com";
 	}
 
 	public static String firmadoConLlaveValida(JWTClaimsSet claims) {
@@ -71,8 +77,17 @@ public final class TokensDePrueba {
 
 	/** Cliente HTTP que se presenta con un token válido en cada petición. */
 	public static RestClient clienteAutenticado(int puerto) {
+		return clienteAutenticado(puerto, UUID.randomUUID().toString());
+	}
+
+	/** Igual, pero como una persona concreta: la que se sembró con ese {@code sub}. */
+	public static RestClient clienteAutenticado(int puerto, String subject) {
+		return clienteConToken(puerto, valido(subject));
+	}
+
+	public static RestClient clienteConToken(int puerto, String token) {
 		return RestClient.builder().baseUrl("http://localhost:" + puerto)
-				.defaultHeader("Authorization", "Bearer " + valido()).build();
+				.defaultHeader("Authorization", "Bearer " + token).build();
 	}
 
 	public static RestClient clienteSinToken(int puerto) {

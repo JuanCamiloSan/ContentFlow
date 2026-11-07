@@ -331,7 +331,118 @@ class IdentidadRlsTest {
 		assertThatThrownBy(() -> puedeVer(ana, null, UUID.randomUUID())).hasMessageContaining("No hay contexto de workspace");
 	}
 
+	// ---- resolver_usuario: la única puerta para traducir un sub de Google y registrar a la persona (C4)
+
+	@Test
+	void resolverUsuarioCreaALaPersonaLaPrimeraVezYDevuelveLaMismaDespues() throws SQLException {
+		String sub = "sub-" + UUID.randomUUID();
+
+		UUID primera = resolverComoAplicacion(sub, "Nueva@Example.com");
+		UUID segunda = resolverComoAplicacion(sub, "nueva@example.com");
+
+		assertThat(segunda).isEqualTo(primera);
+		assertThat(contar("SELECT count(*) FROM app_user WHERE google_sub = '" + sub + "'")).isEqualTo(1);
+		// Normaliza el correo y deja los privilegios en su valor por defecto: nunca los decide quien llama
+		assertThat(comoDuenoTexto("SELECT email || '|' || max_workspaces || '|' || is_platform_admin "
+				+ "FROM app_user WHERE id = '" + primera + "'")).isEqualTo("nueva@example.com|1|false");
+	}
+
+	@Test
+	void resolverUsuarioConUnSubYaRegistradoNoCambiaNiElCorreoNiLosPrivilegios() throws SQLException {
+		UUID admin = crearPersona("admin");
+		comoDueno("UPDATE app_user SET is_platform_admin = true, max_workspaces = 5 WHERE id = '" + admin + "'");
+		String sub = comoDuenoTexto("SELECT google_sub FROM app_user WHERE id = '" + admin + "'");
+
+		assertThat(resolverComoAplicacion(sub, "otro@example.com")).isEqualTo(admin);
+
+		assertThat(comoDuenoTexto("SELECT is_platform_admin || '|' || max_workspaces FROM app_user WHERE id = '"
+				+ admin + "'")).isEqualTo("true|5");
+	}
+
+	@Test
+	void resolverUsuarioRechazaUnaIdentidadIncompleta() {
+		for (String[] invalida : new String[][] { { "", "a@example.com" }, { "  ", "a@example.com" },
+				{ "sub-x", "" }, { "sub-x", "  " }, { null, "a@example.com" }, { "sub-x", null } }) {
+			assertThatThrownBy(() -> resolverComoAplicacion(invalida[0], invalida[1]))
+					.hasMessageContaining("Identidad incompleta");
+		}
+	}
+
+	@Test
+	void resolverUsuarioDevuelveSoloUnUuidYNoPermiteLeerAOtraPersona() throws SQLException {
+		UUID ana = crearPersona("ana");
+		String subAna = comoDuenoTexto("SELECT google_sub FROM app_user WHERE id = '" + ana + "'");
+		UUID beto = crearPersona("beto");
+
+		// Resolver a Ana no da acceso a la fila de Beto: la lectura sigue sujeta a RLS por app.user_id
+		assertThat(resolverComoAplicacion(subAna, "x@example.com")).isEqualTo(ana);
+		assertThat(ids(ana, null, "SELECT id FROM app_user WHERE id = '" + beto + "'")).isEmpty();
+	}
+
+	@Test
+	void resolverUsuarioFijaSuSearchPathYSoloLaEjecutaLaAplicacion() throws SQLException {
+		// Una SECURITY DEFINER sin search_path fijo ejecuta objetos ajenos con los privilegios del dueño
+		assertThat(comoDuenoTexto("SELECT prosecdef || '|' || array_to_string(proconfig, ',') FROM pg_proc "
+				+ "WHERE proname = 'resolver_usuario'")).startsWith("true|search_path=pg_catalog, public, pg_temp");
+		assertThat(comoDuenoTexto("SELECT has_function_privilege('contentplan_app', 'resolver_usuario(text,text)', "
+				+ "'EXECUTE') || '|' || has_function_privilege('public', 'resolver_usuario(text,text)', 'EXECUTE')"))
+				.isEqualTo("true|false");
+	}
+
+	@Test
+	void resolverUsuarioConPrimerosIngresosSimultaneosDejaUnaSolaFila() throws Exception {
+		String sub = "sub-" + UUID.randomUUID();
+		int hilos = 8;
+		java.util.concurrent.ExecutorService pool = java.util.concurrent.Executors.newFixedThreadPool(hilos);
+		java.util.concurrent.CountDownLatch salida = new java.util.concurrent.CountDownLatch(1);
+		try {
+			List<java.util.concurrent.Future<UUID>> trabajos = new ArrayList<>();
+			for (int i = 0; i < hilos; i++) {
+				trabajos.add(pool.submit(() -> {
+					salida.await();
+					return resolverComoAplicacion(sub, "carrera@example.com");
+				}));
+			}
+			salida.countDown();
+			List<UUID> devueltos = new ArrayList<>();
+			for (java.util.concurrent.Future<UUID> trabajo : trabajos) {
+				devueltos.add(trabajo.get(30, java.util.concurrent.TimeUnit.SECONDS));
+			}
+			assertThat(devueltos).doesNotContainNull().containsOnly(devueltos.get(0));
+		}
+		finally {
+			pool.shutdownNow();
+		}
+		assertThat(contar("SELECT count(*) FROM app_user WHERE google_sub = '" + sub + "'")).isEqualTo(1);
+	}
+
 	// ---- Auxiliares
+
+	/** Como la API: con el rol de aplicación y en su propia transacción, sin contexto de usuario. */
+	private static UUID resolverComoAplicacion(String sub, String correo) throws SQLException {
+		try (Connection c = conectar(RolesDePrueba.APLICACION, RolesDePrueba.CLAVE_APLICACION);
+				PreparedStatement ps = c.prepareStatement("SELECT resolver_usuario(?, ?)")) {
+			ps.setString(1, sub);
+			ps.setString(2, correo);
+			try (ResultSet rs = ps.executeQuery()) {
+				assertThat(rs.next()).isTrue();
+				return rs.getObject(1, UUID.class);
+			}
+		}
+	}
+
+	private static int contar(String sql) throws SQLException {
+		return Integer.parseInt(comoDuenoTexto(sql));
+	}
+
+	private static String comoDuenoTexto(String sql) throws SQLException {
+		try (Connection c = conectar(RolesDePrueba.DUENO, RolesDePrueba.CLAVE_DUENO);
+				PreparedStatement ps = c.prepareStatement(sql);
+				ResultSet rs = ps.executeQuery()) {
+			assertThat(rs.next()).isTrue();
+			return rs.getString(1);
+		}
+	}
 
 	private static boolean puedeVer(UUID usuario, UUID workspace, UUID cliente) throws SQLException {
 		try (Connection c = conexionConContexto(usuario, workspace);

@@ -86,8 +86,8 @@ curl http://localhost:8080/health    # {"status":"UP"}
 ```
 
 Con la API arriba, la documentación interactiva está en http://localhost:8080/swagger-ui/index.html
-y la definición OpenAPI en http://localhost:8080/v3/api-docs. Todavía no hay autenticación (llega en
-el bloque C), así que antes de desplegar hay que restringir o desactivar estas rutas.
+y la definición OpenAPI en http://localhost:8080/v3/api-docs. Estas rutas no piden token (`/health`, `/v3/api-docs` y `/swagger-ui`),
+así que antes de desplegar hay que restringir o desactivar la documentación.
 
 Al arrancar, Flyway aplica las migraciones de `api/src/main/resources/db/migration`. Para ver el
 historial:
@@ -103,11 +103,13 @@ Cada transacción que abre la API fija `app.user_id` y `app.workspace_id` con `s
 en un único punto: `TransaccionesConContexto` (B3, [ADR 0003](docs/adr/0003-contexto-de-sesion-y-roles-de-postgres.md)).
 Sin contexto, toda consulta a una tabla con RLS falla con "No hay contexto de workspace".
 
-Hasta C4 no hay autenticación, así que el contexto sale de las cabeceras `X-Test-User-Id` y
-`X-Workspace-Id`. Ese filtro **está apagado por defecto**: cualquiera que pueda mandar una cabecera
-elige su workspace. Para probar a mano en local, arranca con
-`CONTENTPLAN_CONTEXTO_DE_PRUEBA_HABILITADO=true`. Nunca va en `application.yml` ni en un entorno
-compartido. C4 lo borra.
+El contexto sale del token de Google (C4): `app.user_id` es la persona del `sub` del token, que
+`resolver_usuario` traduce a su `uuid` y registra la primera vez, y `app.workspace_id` es el workspace
+de su `membership`. Si pertenece a uno solo, se usa ese; si pertenece a varios, hay que mandar el
+encabezado `X-Workspace-Id`, que solo se acepta si es suyo (403 si no, 400 si falta o no es un UUID).
+Una persona sin workspace solo llega a los endpoints marcados con `@SinWorkspace`. Ya no existen las
+cabeceras de prueba del bloque B. El administrador de la plataforma no puede entrar a un workspace
+ajeno hasta E13, que crea `audit_log`.
 
 ## Integración continua
 
